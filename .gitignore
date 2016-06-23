@@ -27,3 +27,8 @@
 *.exe
 *.out
 *.app
+build
+lib
+*~
+test
+dmlc-core
