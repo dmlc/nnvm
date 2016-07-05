@@ -30,5 +30,5 @@
 build
 lib
 *~
-test
 dmlc-core
+cli_test
