@@ -123,7 +123,24 @@ int NNSymbolPrint(SymbolHandle symbol, const char **out_str) {
   API_END();
 }
 
-int MXSymbolSetAttrs(SymbolHandle symbol,
+int NNSymbolGetAttr(SymbolHandle symbol,
+                    const char* key,
+                    const char** out,
+                    int* success) {
+  Symbol *s = static_cast<Symbol*>(symbol);
+  NNAPIThreadLocalEntry *ret = NNAPIThreadLocalStore::Get();
+  API_BEGIN();
+  if (s->GetAttr(key, &(ret->ret_str))) {
+    *out = (ret->ret_str).c_str();
+    *success = 1;
+  } else {
+    *out = nullptr;
+    *success = 0;
+  }
+  API_END();
+}
+
+int NNSymbolSetAttrs(SymbolHandle symbol,
                      nn_uint num_param,
                      const char** keys,
                      const char** vals) {

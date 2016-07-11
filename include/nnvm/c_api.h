@@ -123,7 +123,18 @@ NNVM_DLL int NNSymbolCopy(SymbolHandle symbol, SymbolHandle *out);
  * \return 0 when success, -1 when failure happens
  */
 NNVM_DLL int NNSymbolPrint(SymbolHandle symbol, const char **out_str);
-
+/*!
+ * \brief Get string attribute from symbol
+ * \param symbol the source symbol
+ * \param key The key of the symbol.
+ * \param out The result attribute, can be NULL if the attribute do not exist.
+ * \param success Whether the result is contained in out.
+ * \return 0 when success, -1 when failure happens
+ */
+NNVM_DLL int NNSymbolGetAttr(SymbolHandle symbol,
+                             const char* key,
+                             const char** out,
+                             int *success);
 /*!
  * \brief Set string attribute from symbol.
  *  NOTE: Setting attribute to a symbol can affect the semantics(mutable/immutable) of symbolic graph.

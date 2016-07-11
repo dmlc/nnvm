@@ -10,5 +10,11 @@ NNVM_REGISTER_OP(add)
 .attr("inplace_pair", std::make_pair(0, 0));
 
 
+NNVM_REGISTER_OP(exp)
+.describe("take exponmential")
+.set_num_inputs(1)
+.attr("inplace_pair", std::make_pair(0, 0));
+
+
 NNVM_REGISTER_OP(add)
 .attr<std::string>("nick_name", "plus");
