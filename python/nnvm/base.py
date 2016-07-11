@@ -24,7 +24,7 @@ else:
     py_str = lambda x: x
 
 
-class NNNetError(Exception):
+class NNVMError(Exception):
     """Error that will be throwed by all nnvm functions"""
     pass
 
@@ -45,6 +45,7 @@ _LIB = _load_lib()
 nn_uint = ctypes.c_uint
 SymbolCreatorHandle = ctypes.c_void_p
 SymbolHandle = ctypes.c_void_p
+GraphHandle = ctypes.c_void_p
 
 #----------------------------
 # helper function definition
@@ -61,7 +62,7 @@ def check_call(ret):
         return value from API calls
     """
     if ret != 0:
-        raise NNNetError(py_str(_LIB.NNGetLastError()))
+        raise NNVMError(py_str(_LIB.NNGetLastError()))
 
 def c_str(string):
     """Create ctypes char * from a python string

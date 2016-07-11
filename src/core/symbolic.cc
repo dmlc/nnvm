@@ -196,8 +196,9 @@ void Symbol::Compose(const std::vector<Symbol>& args,
         static auto& flist_inputs = Op::GetAttr<FListInputNames>("FListInputNames");
         FListInputNames fn = flist_inputs.get(n->op, nullptr);
         auto arg_names = (fn == nullptr) ? std::vector<std::string>{"data"} : fn(n->attrs);
-        CHECK_EQ(arg_names.size(), n_req);
-
+        if (arg_names.size() != n_req) {
+          LOG(FATAL) << "Not enough argument to call operator " << outputs[0].node->op->name;
+        }
         size_t nmatched = 0;
         for (size_t i = args.size(); i < n_req; ++i) {
           auto it = kwargs.find(arg_names[i]);

@@ -3,7 +3,6 @@
  * \file c_api_symbolic.cc
  * \brief C API related to symbolic graph compsition.
  */
-#include <dmlc/logging.h>
 #include <nnvm/c_api.h>
 #include <nnvm/op.h>
 #include <nnvm/symbolic.h>

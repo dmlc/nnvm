@@ -6,7 +6,6 @@ from __future__ import absolute_import as _abs
 import copy
 import ctypes
 import sys
-import numpy
 from .base import _LIB
 from .base import c_array, c_str, nn_uint, py_str, string_types
 from .base import SymbolHandle
