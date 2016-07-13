@@ -45,7 +45,7 @@ inline void UpdateNodeVersion(Node *n) {
         CHECK(e.node->is_variable())
             << "Mutation target can only be Variable";
         // increase the version of the variable.
-        ++nnvm::get<VariableParam>(e.node->attrs.parsed).version;
+        e.version = ++nnvm::get<VariableParam>(e.node->attrs.parsed).version;
       }
     }
   }
@@ -98,13 +98,19 @@ Symbol Symbol::Copy() const {
   std::unordered_map<Node*, std::shared_ptr<Node> > old_new;
   // use DFSVisit to copy all the nodes
   DFSVisit(this->outputs, [&old_new](const std::shared_ptr<Node>& node) {
-      old_new[node.get()] =  std::make_shared<Node>(*node);
+      std::shared_ptr<Node> np = Node::Create();
+      np->op = node->op;
+      np->attrs = node->attrs;
+      old_new[node.get()] = std::move(np);
     });
   // connect nodes of new graph
   for (const auto &kv : old_new) {
     for (const NodeEntry& e : kv.first->inputs) {
       Node *ptr = e.node.get();
       kv.second->inputs.emplace_back(NodeEntry{old_new[ptr], e.index, e.version});
+    }
+    for (const std::shared_ptr<Node>& p : kv.first->control_deps) {
+      kv.second->control_deps.emplace_back(old_new[p.get()]);
     }
   }
   // set the head
@@ -120,7 +126,7 @@ void Symbol::Print(std::ostream &os) const {
     os << "AtomicFunctor "<< " Op:" << outputs[0].node->op->name << '\n';
   } else {
     // use DFSVisit to copy all the nodes
-    os << "Outputs:\n";
+    os << "Symbol Outputs:\n";
     for (size_t i = 0; i < outputs.size(); ++i) {
       os << "\toutput[" << i << "]=" << outputs[i].node->attrs.name
          << '(' << outputs[i].index << ")\n";
@@ -129,7 +135,8 @@ void Symbol::Print(std::ostream &os) const {
         if (node->is_variable()) {
           os << "Variable:" << node->attrs.name << '\n';
         } else {
-          os << "Name: " << node->attrs.name << " Op:" << node->op->name << '\n'
+          os << "--------------------\n";
+          os << "Op:" << node->op->name << ", Name=" << node->attrs.name << '\n'
              << "Inputs:\n";
           for (size_t i = 0; i < node->inputs.size(); ++i) {
             const NodeEntry& e = node->inputs[i];
@@ -141,9 +148,17 @@ void Symbol::Print(std::ostream &os) const {
               os << '\n';
             }
           }
-          os << "Attrs:\n";
-          for (auto &kv : node->attrs.dict) {
-            os << '\t' << kv.first << '=' << kv.second << '\n';
+          if (!node->attrs.dict.empty()) {
+            os << "Attrs:\n";
+            for (auto &kv : node->attrs.dict) {
+              os << '\t' << kv.first << '=' << kv.second << '\n';
+            }
+          }
+          if (node->control_deps.size() != 0) {
+            os << "Control deps:\n";
+            for (size_t i = 0; i < node->control_deps.size(); ++i) {
+              os << "\tcdep[" << i << "]=" << node->control_deps[i]->attrs.name << '\n';
+            }
           }
         }
       });
