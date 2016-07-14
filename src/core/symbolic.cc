@@ -218,8 +218,8 @@ std::vector<std::string> Symbol::ListOutputs() const {
 }
 
 // compositional logic
-void Symbol::Compose(const std::vector<Symbol>& args,
-                     const std::unordered_map<std::string, Symbol>& kwargs,
+void Symbol::Compose(const array_view<const Symbol*>& args,
+                     const std::unordered_map<std::string, const Symbol*>& kwargs,
                      const std::string& name) {
   static auto& flist_inputs = Op::GetAttr<FListInputNames>("FListInputNames");
 
@@ -228,11 +228,11 @@ void Symbol::Compose(const std::vector<Symbol>& args,
   CHECK(!outputs[0].node->is_variable()) << "Variable cannot be composed";
   // parameter check.
   for (size_t i = 0; i < args.size(); ++i) {
-    CHECK_EQ(args[i].outputs.size(), 1)
+    CHECK_EQ(args[i]->outputs.size(), 1)
         << "Argument " << i << " is a tuple, single value is required";
   }
   for (const auto& kv : kwargs) {
-    CHECK_EQ(kv.second.outputs.size(), 1)
+    CHECK_EQ(kv.second->outputs.size(), 1)
         << "Keyword Argument " << kv.first << " is a tuple, single value is required";
   }
   // assign new name
@@ -249,7 +249,7 @@ void Symbol::Compose(const std::vector<Symbol>& args,
           << "Incorrect number of arguments, requires " << n_req
           << ", provided " << args.size();
       for (size_t i = 0; i < args.size(); ++i) {
-        n->inputs[i] = args[i].outputs[0];
+        n->inputs[i] = args[i]->outputs[0];
       }
       // switch to keyword argument matching
       if (args.size() != n_req) {
@@ -262,7 +262,7 @@ void Symbol::Compose(const std::vector<Symbol>& args,
         for (size_t i = args.size(); i < n_req; ++i) {
           auto it = kwargs.find(arg_names[i]);
           if (it != kwargs.end() && it->first == arg_names[i]) {
-            n->inputs[i] = it->second.outputs[0];
+            n->inputs[i] = it->second->outputs[0];
             ++nmatched;
           } else {
             n->inputs[i] = NodeEntry{
@@ -281,8 +281,8 @@ void Symbol::Compose(const std::vector<Symbol>& args,
     } else {
       CHECK_EQ(kwargs.size(), 0) << "Variable length function do not accept kwargs";
       n->inputs.reserve(args.size());
-      for (const Symbol& s : args) {
-        n->inputs.push_back(s.outputs[0]);
+      for (const Symbol* s : args) {
+        n->inputs.push_back(s->outputs[0]);
       }
     }
     UpdateNodeVersion(n);
@@ -298,13 +298,13 @@ void Symbol::Compose(const std::vector<Symbol>& args,
         (const std::shared_ptr<Node> &node) {
       if (node->is_variable()) {
         if (arg_counter < args.size()) {
-          replace_map[node.get()] = &(args[arg_counter].outputs[0]);
+          replace_map[node.get()] = &(args[arg_counter]->outputs[0]);
           ++arg_counter;
         } else {
             // match kwargs
           auto kit = kwargs.find(node->attrs.name);
           if (kit != kwargs.end()) {
-            replace_map[node.get()] = &(kit->second.outputs[0]);
+            replace_map[node.get()] = &(kit->second->outputs[0]);
             ++nmatched;
           }
         }
@@ -349,8 +349,8 @@ void Symbol::Compose(const std::vector<Symbol>& args,
   }
 }
 
-Symbol Symbol::operator () (const std::vector<Symbol>& args,
-                            const std::unordered_map<std::string, Symbol>& kwargs,
+Symbol Symbol::operator () (const array_view<const Symbol*>& args,
+                            const std::unordered_map<std::string, const Symbol*>& kwargs,
                             const std::string& name) const {
   Symbol s = this->Copy();
   s.Compose(args, kwargs, name);
