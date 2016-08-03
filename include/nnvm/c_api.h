@@ -36,6 +36,12 @@ typedef void *SymbolHandle;
 typedef void *GraphHandle;
 
 /*!
+ * \brief Set the last error message needed by C API
+ * \param msg The error message to set.
+ */
+NNVM_DLL void NNAPISetLastError(const char* msg);
+
+/*!
  * \brief return str message of the last error
  *  all function in this file will return 0 when success
  *  and -1 when an error occured,

@@ -19,7 +19,6 @@ int NNSymbolListAtomicSymbolCreators(nn_uint *out_size,
   API_END();
 }
 
-
 int NNSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                 const char **name,
                                 const char **description,
@@ -36,7 +35,6 @@ int NNSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
   *num_doc_args = 0;
   API_END();
 }
-
 
 int NNSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
                                nn_uint num_param,

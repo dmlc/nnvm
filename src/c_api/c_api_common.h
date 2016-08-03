@@ -10,6 +10,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/thread_local.h>
 #include <nnvm/c_api.h>
+#include <nnvm/symbolic.h>
 #include <vector>
 #include <string>
 
@@ -43,11 +44,6 @@ struct NNAPIThreadLocalEntry {
 /*! \brief Thread local store that can be used to hold return values. */
 typedef dmlc::ThreadLocalStore<NNAPIThreadLocalEntry> NNAPIThreadLocalStore;
 
-/*!
- * \brief Set the last error message needed by C API
- * \param msg The error message to set.
- */
-void NNAPISetLastError(const char* msg);
 /*!
  * \brief handle exception throwed out
  * \param e the exception
