@@ -10,7 +10,6 @@
 #include <dmlc/logging.h>
 #include <dmlc/thread_local.h>
 #include <nnvm/c_api.h>
-#include <nnvm/symbolic.h>
 #include <vector>
 #include <string>
 
