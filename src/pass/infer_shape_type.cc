@@ -9,6 +9,7 @@
 
 namespace nnvm {
 namespace pass {
+namespace {
 
 template<typename AttrType, typename IsNone>
 Graph InferAttr(Graph &&ret,
@@ -123,5 +124,6 @@ DMLC_JSON_ENABLE_ANY(ShapeVector, list_shape);
 DMLC_JSON_ENABLE_ANY(DTypeVector, list_int);
 DMLC_JSON_ENABLE_ANY(size_t, size_t);
 
+}  // namespace
 }  // namespace pass
 }  // namespace nnvm

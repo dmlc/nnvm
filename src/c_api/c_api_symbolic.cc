@@ -219,6 +219,7 @@ int NNSymbolCompose(SymbolHandle sym,
   std::string& s_name = ret->ret_str;
   std::unordered_map<std::string, const Symbol*>& kwargs
       = ret->kwarg_symbol;
+  kwargs.clear();
   if (name != nullptr) {
     s_name = name;
   } else {
