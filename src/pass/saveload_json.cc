@@ -26,7 +26,7 @@ struct Handler<std::shared_ptr<const any> > {
 }  // namespace dmlc
 
 namespace nnvm {
-namespace pass
+namespace pass {
 namespace {
 
 // auxiliary node structure for serialization.
