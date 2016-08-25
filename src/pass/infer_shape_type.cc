@@ -52,8 +52,8 @@ Graph InferAttr(Graph &&ret,
   size_t num_unknown = 0;
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
     const auto& inode = idx[nid];
-    int num_inputs = inode.inputs.size();
-    int num_outputs = inode.source->num_outputs();
+    uint32_t num_inputs = inode.inputs.size();
+    uint32_t num_outputs = inode.source->num_outputs();
     if (inode.source->is_variable()) {
       if (shape_attr_key.length() != 0 && fis_none(rshape[idx.entry_id(nid, 0)])) {
         auto it = inode.source->attrs.dict.find(shape_attr_key);
