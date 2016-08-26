@@ -12,6 +12,7 @@
 #include <functional>
 #include "./base.h"
 #include "./tuple.h"
+#include "./node.h"
 
 namespace nnvm {
 
@@ -106,6 +107,17 @@ using TIsBackwardOp = bool;
  */
 using FInplaceOption = std::function<
   std::vector<std::pair<int, int> > (const NodeAttrs& attrs)>;
+
+/*!
+ * \brief Get the gradient node of the op node
+ *  This function generates the backward graph of the node
+ * \param nodeptr The node to take gradient
+ * \param out_grads Gradient of current node's outputs
+ * \return gradients of the inputs
+ */
+using FGrad = std::function<std::vector<NodeEntry>(
+    const NodePtr nodeptr,
+    const std::vector<NodeEntry>& out_grads)>;
 
 }  // namespace nnvm
 
