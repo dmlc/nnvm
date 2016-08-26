@@ -11,6 +11,7 @@
 #define NNVM_PASS_FUNCTIONS_H_
 
 #include <string>
+#include <vector>
 #include <memory>
 #include "./base.h"
 #include "./pass.h"
@@ -123,8 +124,8 @@ inline Graph Gradient(
     Graph graph,
     std::vector<NodeEntry> ys,
     std::vector<NodeEntry> xs,
-    std::function<NodeEntry (std::vector<NodeEntry>&& inputs)> aggregate_fun= nullptr,
-    std::function<int (const Node& node)> mirror_fun = nullptr) {
+    std::function<NodeEntry(std::vector<NodeEntry>&& inputs)> aggregate_fun = nullptr,
+    std::function<int(const Node& node)> mirror_fun = nullptr) {
   graph.attrs["grad_ys"] = std::make_shared<any>(std::move(ys));
   graph.attrs["grad_xs"] = std::make_shared<any>(std::move(xs));
   if (aggregate_fun != nullptr) {

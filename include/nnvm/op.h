@@ -102,16 +102,16 @@ class Op {
   uint32_t num_outputs = 1;
   /*!
    * \brief get number of outputs given information about the node.
-   * \param attrs The attribute of the node
+   * \param n The node
    * \return number of outputs.
    */
-  std::function<uint32_t(const NodeAttrs& attrs)> get_num_outputs = nullptr;
+  std::function<uint32_t(const Node& n)> get_num_outputs = nullptr;
   /*!
    * \brief get number of inputs given information about the node.
-   * \param attrs The attribute of the node
+   * \param n The node
    * \return number of inputs
    */
-  std::function<uint32_t(const NodeAttrs& attrs)> get_num_inputs = nullptr;
+  std::function<uint32_t(const Node& n)> get_num_inputs = nullptr;
   /*!
    * \brief Attribute parser to parse the NodeAttrs information.
    *
@@ -136,11 +136,11 @@ class Op {
    *     attrs->parsed = std::move(param);
    *  }
    *  // The other function that can utilize the parsed result.
-   *  TShape SumInferShape(const NodeAttrs& attrs,
+   *  TShape SumInferShape(const NodePtr& ptr,
    *                       const std::vector<TShape>& ishapes) {
    *     // we can use the parsed version of param
    *     // without repeatively parsing the parameter
-   *     const SumParam& param = nnvm::get<SumParam>(attrs.parsed);
+   *     const SumParam& param = nnvm::get<SumParam>(ptr->attrs.parsed);
    *  }
    * \endcode
    */
@@ -180,7 +180,7 @@ class Op {
    * \param fn The function to be set.
    * \return reference to self.
    */
-  inline Op& set_num_inputs(std::function<uint32_t (const NodeAttrs& attr)> fn);  // NOLINT(*)
+  inline Op& set_num_inputs(std::function<uint32_t (const Node& n)> fn);  // NOLINT(*)
   /*!
    * \brief Set the num_outputs
    * \param n The number of outputs to be set.
@@ -192,7 +192,7 @@ class Op {
    * \param fn The function to be set.
    * \return reference to self.
    */
-  inline Op& set_num_outputs(std::function<uint32_t (const NodeAttrs& attr)> fn);  // NOLINT(*)
+  inline Op& set_num_outputs(std::function<uint32_t (const Node& n)> fn);  // NOLINT(*)
   /*!
    * \brief Set the attr_parser function.
    * \param fn The number of outputs to be set.
@@ -375,7 +375,7 @@ inline Op& Op::set_num_inputs(uint32_t n) {  // NOLINT(*)
   return *this;
 }
 
-inline Op& Op::set_num_inputs(std::function<uint32_t (const NodeAttrs& attr)> fn) {  // NOLINT(*)
+inline Op& Op::set_num_inputs(std::function<uint32_t (const Node& n)> fn) {  // NOLINT(*)
   this->get_num_inputs = fn;
   return *this;
 }
@@ -385,7 +385,7 @@ inline Op& Op::set_num_outputs(uint32_t n) {  // NOLINT(*)
   return *this;
 }
 
-inline Op& Op::set_num_outputs(std::function<uint32_t (const NodeAttrs& attr)> fn) {  // NOLINT(*)
+inline Op& Op::set_num_outputs(std::function<uint32_t (const Node& n)> fn) {  // NOLINT(*)
   this->get_num_outputs = fn;
   return *this;
 }
