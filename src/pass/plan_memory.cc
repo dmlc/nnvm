@@ -142,11 +142,11 @@ Graph PlanMemory(Graph ret) {
   // step 1: initialize reference count
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
     for (const auto& e : idx[nid].inputs) {
-      ++ref_count[e.node_id];
+      ++ref_count[idx.entry_id(e)];
     }
   }
   for (const auto& e : idx.outputs()) {
-    ++ref_count[e.node_id];
+    ++ref_count[idx.entry_id(e)];
   }
   // step 2: allocate memory.
   StorageVector storage(idx.num_node_entries(), -1);
