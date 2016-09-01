@@ -1,7 +1,8 @@
 # NNVM Overview
 
 NNVM is a C++ library to help developers to build deep learning system.
-It provides ways to construct, represent and transform computation graphs.
+It provides ways to construct, represent and transform computation graphs
+invariant of how it is executed.
 
 To begin with, let us start with a few stories to tell the design goals.
 
@@ -140,6 +141,8 @@ Before, all the attributes of operator have to sit on a centralized interface cl
 Now, everyone can register their own attribute, take some other attribute they need from another project
 without need to change the operator interface.
 
+See [example code](../example/src/operator.cc) on how operators can be registered.
+
 ## Graph and Pass
 
 When we get more information about the operators.
@@ -173,18 +176,21 @@ to enhance.
 We can also register more runtime related information to the operator registry,
 and define pass function to do runtime related optimization of the graph.
 
+## Relation to LLVM
+
+NNVM is inspired by LLVM. It is at a more high level, in a sense that there are a lot of optimization
+chance we can have by knowing the high level information about the operator.
+On the other hand, we do believe that code generation to LLVM can be a natural extension and can benefit some of the usecases.
+
 ## Unix Philosophy in Learning Systems
 
 There are a few existing computation graph based deep learning frameworks (e.g. Theano, Tensorflow, Caffe2, MXNet etc.).
-NNVM do not aim to become another framework. Instead, NNVM summarizes a module that contains
+NNVM do not intend to become another one. Instead, NNVM summarizes a module that contains
 
 - The graph representation is minimum, with no code dependency
 - Operator attribute allow arbitrary information registered in unified way
 - Invariant of execution layer to be re-targetable to multiple frontend and backend.
 
 We believe this is the correct way for learning system.
-By having more such modules, better system can be built in minimum and efficient way.
-Of course it is not enough to have a lonely module.
-On that end, we are shifting MXNet to use NNVM for graph optimization support.
-All the improvements brought by NNVM will benefit the end-to-end deep learninig framework and hopefully
-we will have more modules to make deep learning system research and building easy, fun and rewarding.
+By having more such modules, we can pick one ones we need, and remove the ones we do not want in our use cases.
+Hopefully these effort can make deep learning system research and building easy, fun and rewarding.
