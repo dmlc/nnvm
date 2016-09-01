@@ -37,6 +37,7 @@ addons:
       - graphviz
 
 before_install:
+  - git clone https://github.com/dmlc/dmlc-core
   - source dmlc-core/scripts/travis/travis_setup_env.sh
   - export PYTHONPATH=${PYTHONPATH}:${PWD}/python
 
