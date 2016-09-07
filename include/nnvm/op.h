@@ -150,9 +150,13 @@ class Op {
    * \brief setter function during registration
    *  Set the description of operator
    * \param descr the description string.
+   * \param file name of the file that registered this op (set to __FILE__).
+   * \param line line number in the file (set to __LINE__).
    * \return reference to self.
    */
-  inline Op& describe(const std::string& descr);  // NOLINT(*)
+  inline Op& describe(const std::string& descr,  // NOLINT(*)
+                      const char* file=nullptr,
+                      const char* line=nullptr);
   /*!
    * \brief Add argument information to the function.
    * \param name Name of the argument.
@@ -353,8 +357,14 @@ inline Op& Op::attr(  // NOLINT(*)
   return *this;
 }
 
-inline Op& Op::describe(const std::string& descr) {  // NOLINT(*)
+inline Op& Op::describe(const std::string& descr,  // NOLINT(*)
+                        const char* file,
+                        const char* line) {
   this->description = descr;
+  if (file != nullptr) {
+    CHECK(line != nullptr);
+    this->description = this->description + "\n\nFrom:" + file + ":" + line;
+  }
   return *this;
 }
 
