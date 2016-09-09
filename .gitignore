@@ -33,3 +33,7 @@ lib
 dmlc-core
 cli_test
 *.pyc
+
+# Vim
+*.swp
+*.swo
