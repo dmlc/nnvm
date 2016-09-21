@@ -1,9 +1,14 @@
 # coding: utf-8
 """Information about nnvm."""
 from __future__ import absolute_import
-import __builtin__
+import sys
 import os
 import platform
+
+if sys.version_info[0] == 3:
+    import builtins as __builtin__
+else:
+    import __builtin__
 
 def find_lib_path():
     """Find NNNet dynamic library files.
