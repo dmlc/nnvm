@@ -13,6 +13,7 @@ namespace {
 
 template<typename AttrType, typename IsNone>
 Graph InferAttr(Graph &&ret,
+                const AttrType empty_val,
                 const AttrType default_val,
                 const char* infer_name,
                 const char* input_name,
@@ -31,7 +32,7 @@ Graph InferAttr(Graph &&ret,
   if (ret.attrs.count(attr_name) != 0) {
     rshape = ret.MoveCopyAttr<AttrVector>(attr_name);
   } else {
-    rshape.resize(idx.num_node_entries(), default_val);
+    rshape.resize(idx.num_node_entries(), empty_val);
   }
 
   if (ret.attrs.count(input_name) != 0) {
@@ -74,11 +75,11 @@ Graph InferAttr(Graph &&ret,
       }
     } else if (finfer_shape.count(inode.source->op())) {
       // Forward operator inference.
-      ishape.resize(num_inputs, default_val);
+      ishape.resize(num_inputs, empty_val);
       for (uint32_t i = 0; i < ishape.size(); ++i) {
         ishape[i] = rshape[idx.entry_id(inode.inputs[i])];
       }
-      oshape.resize(num_outputs, default_val);
+      oshape.resize(num_outputs, empty_val);
       for (uint32_t i = 0; i < oshape.size(); ++i) {
         oshape[i] = rshape[idx.entry_id(nid, i)];
       }
@@ -113,6 +114,10 @@ Graph InferAttr(Graph &&ret,
       num_unknown += !known;
     }
   }
+  
+  for (AttrType& i : rshape) {
+    if (i == empty_val) i = default_val;
+  }
   // set the shapes
   ret.attrs[attr_name] = std::make_shared<any>(std::move(rshape));
   // number of nodes who knows the shape.
@@ -124,7 +129,7 @@ NNVM_REGISTER_PASS(InferShape)
 .describe("Infer the shape of each node entries.")
 .set_body([](Graph ret) {
     return InferAttr<TShape>(
-        std::move(ret), TShape(),
+        std::move(ret), TShape(), TShape(),
         "FInferShape", "shape_inputs", "shape_attr_key",
         "shape", "shape_num_unknown_nodes",
         [](const TShape& s) { return s.ndim() == 0; });
@@ -136,7 +141,7 @@ NNVM_REGISTER_PASS(InferType)
 .describe("Infer the dtype of each node entries.")
 .set_body([](Graph ret) {
     return InferAttr<int>(
-        std::move(ret), 0,
+        std::move(ret), -1, 0,
         "FInferType", "dtype_inputs", "dtype_attr_key",
         "dtype", "dtype_num_unknown_nodes",
         [](const int t) { return t == -1; });
