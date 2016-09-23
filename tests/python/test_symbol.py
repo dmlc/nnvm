@@ -49,7 +49,6 @@ def test_control_dep():
     z = sym.assign(x, y)
     t = sym.add(x, x)
     t._add_control_deps([z, y])
-    print t.debug_str()
 
 if __name__ == "__main__":
     test_copy()
