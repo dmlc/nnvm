@@ -45,7 +45,13 @@ static const uint32_t kVarg = std::numeric_limits<uint32_t>::max();
  *  NNVM_REGISTER_OP(add)
  *  .describe("add two inputs together")
  *  .set_num_inputs(2)
- *  .set_attr<OpKernel>("gpu_kernel", AddKernel);
+ *  .set_attr<OpKernel>("OpKernel<gpu>", AddKernel)
+ *  .include("ElementwiseOpAttr");
+ *
+ *  // can register attribute by group
+ *  // all the ops that include the group get the attribute.
+ *  NNVM_REGISTER_OP_GROUP(ElementwiseOpAttr)
+ *  .set_attr<FInferShape>("FInferShape", ElementwiseInferShape);
  *
  *  NNVM_REGISTER_OP(sub)
  *  .describe("substract one tensor from another")
@@ -54,7 +60,8 @@ static const uint32_t kVarg = std::numeric_limits<uint32_t>::max();
  *  // Can call regster multiple times in different files
  *  // to register different part of information
  *  NNVM_REGISTER_OP(sub)
- *  .set_attr<OpKernel>("gpu_kernel", SubKernel);
+ *  .set_attr<OpKernel>("OpKernel<gpu>", SubKernel);
+ *  .include("ElementwiseOpAttr");
  *
  *  // get operators from registry.
  *  void my_function() {
@@ -66,7 +73,7 @@ static const uint32_t kVarg = std::numeric_limits<uint32_t>::max();
  *
  *    // get additional registered information,
  *    // Assume user registered a OpKernel type attribute as gpu_kernel on each operator.
- *    const OpMap<OpKernel>& kernel = Op::GetAttr<OpKernel>("gpu_kernel");
+ *    const OpMap<OpKernel>& kernel = Op::GetAttr<OpKernel>("OpKernel<gpu>");
  *    // we can get the kernel functions by using operator as key.
  *    auto add_kernel = kernel[add];
  *    auto sub_kernel = kernel[sub];
@@ -375,12 +382,12 @@ class OpGroup {
  *  NNVM_REGISTER_OP(add)
  *  .include("ElementwiseOpAttr");
  *
- *  NNVM_REGISTER_OP(mul)
- *  .include("ElementwiseOpAttr");
- *
- *  // register same attributes to all the ops that matchs the attribute condition.
+ *  // register same attributes to all the ops that include the group
  *  NNVM_REGISTER_OP_GROUP(ElementwiseOpAttr)
  *  .set_attr<FInferShape>("FInferShape", ElementwiseInferShape);
+ *
+ *  NNVM_REGISTER_OP(mul)
+ *  .include("ElementwiseOpAttr");
  *
  * \endcode
  */
