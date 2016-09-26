@@ -208,7 +208,6 @@ class Symbol(SymbolBase):
         _check_call(_LIB.NNSymbolListInputVariables(
             self.handle, self._get_list_copt(option),
             _ctypes.byref(size), _ctypes.byref(sarr)))
-
         return [Symbol(_base.SymbolHandle(sarr[i])) for i in range(size.value)]
 
     def list_input_names(self, option='all'):
