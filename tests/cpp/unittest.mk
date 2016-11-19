@@ -7,6 +7,6 @@ TEST = $(patsubst tests/cpp/%_test.cc, tests/cpp/%_test, $(TEST_SRC))
 tests/cpp/%_test: tests/cpp/%_test.cc lib/libnnvm.a
 	$(CXX) -std=c++11 $(CFLAGS) -MM -MT tests/cpp/$* $< >tests/cpp/$*.d
 	$(CXX) -std=c++11 $(CFLAGS) -I$(GTEST_INC) -o $@ $(filter %.cc %.a, $^)  \
-		-L$(GTEST_LIB)  $(LDFLAGS) -lgtest
+		-L$(GTEST_LIB)  $(LDFLAGS) -lgtest_main -lgtest
 
 -include tests/cpp/*.d

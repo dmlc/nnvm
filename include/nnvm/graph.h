@@ -29,7 +29,9 @@ class Graph {
   /*! \brief outputs of the computation graph. */
   std::vector<NodeEntry> outputs;
   /*!
-   * \brief attributes of a graph
+   * \brief Attributes of a graph
+   *  [DEPRECATED!] Please use the set/get interface for different attribute types.
+   *
    *  Note that attribute is shared pointer and can be shared across graphs.
    *
    *  It is highly recommended to keep each attribute immutable.
@@ -40,13 +42,21 @@ class Graph {
    */
   std::unordered_map<std::string, std::shared_ptr<any> > attrs;
   /*!
-   * \brief Get the immutable attribute from attrs.
+   * \brief [DEPRECATED!] Get the immutable attribute from attrs.
    * \param attr_name the name of the attribute
    * \return the reference to corresponding attribute
    * \tparam T the type of the attribute.
    */
   template<typename T>
   inline const T& GetAttr(const std::string& attr_name) const;
+
+  template<typename T>
+  inline T& GetAttr(const std::string& attr_name);
+
+  inline bool HasAttr(const std::string& attr_name) const {
+    return attrs.count(attr_name) != 0;
+  }
+
   /*!
    * \brief Get a move copy of the attribute, implement copy on write semantics.
    *  The content is moved if the reference counter of shared_ptr is 1.
@@ -58,6 +68,59 @@ class Graph {
    */
   template<typename T>
   inline T MoveCopyAttr(const std::string& attr_name);
+
+  template<typename T>
+  inline const T& GetGraphAttr(const std::string& attr_name) const {
+    return this->GetAttr<T>(attr_name);
+  }
+
+  // Note: NOT THREAD SAFE!
+  template<typename T>
+  inline void SetGraphAttr(const std::string& attr_name, const T& value) {
+    attrs[attr_name] = value;
+  }
+
+  template<typename T>
+  inline const T& GetNodeAttr(const std::string& attr_name, uint32_t nodeid) const;
+
+  // Note: NOT THREAD SAFE!
+  template<typename T>
+  inline void SetNodeAttr(const std::string& attr_name,
+                          uint32_t nodeid, const T& value);
+
+  // Note: NOT THREAD SAFE!
+  template<typename T>
+  inline void SetNodeAttr(const std::string& attr_name, const std::vector<T>& attrs) {
+    this->SetGraphAttr(kNodeAttrPrefix + attr_name, attrs);
+  }
+
+  template<typename T>
+  inline const T& GetNodeEntryAttr(const std::string& attr_name, uint32_t entryid) const;
+
+  // Note: NOT THREAD SAFE!
+  template<typename T>
+  inline void SetNodeEntryAttr(const std::string& attr_name,
+                               uint32_t entryid, const T& value);
+
+  // Note: NOT THREAD SAFE!
+  template<typename T>
+  inline void SetNodeEntryAttr(const std::string& attr_name, const std::vector<T>& attrs) {
+    this->SetGraphAttr(kNodeEntryAttrPrefix + attr_name, attrs);
+  }
+
+  template<typename T>
+  inline const T& GetPassAttr(const std::string& attr_name,
+                              const std::string& pass_name) const {
+    return this->GetGraphAttr<T>(kPassAttrPrefix + pass_name + attr_name);
+  }
+
+  template<typename T>
+  inline void SetPassAttr(const std::string& attr_name,
+                          const std::string& pass_name,
+                          const T& value) {
+    this->SetGraphAttr(kPassAttrPrefix + pass_name + attr_name, value);
+  }
+
   /*!
    * \brief get a indexed graph of current graph, if not exist, create it on demand
    * \return The indexed graph.
@@ -66,6 +129,9 @@ class Graph {
   const IndexedGraph& indexed_graph();
 
  private:
+  static const std::string kNodeAttrPrefix;
+  static const std::string kNodeEntryAttrPrefix;
+  static const std::string kPassAttrPrefix;
   // internal structure of indexed graph
   std::shared_ptr<const IndexedGraph> indexed_graph_;
 };
@@ -219,6 +285,14 @@ inline const T& Graph::GetAttr(const std::string& attr_name) const {
 }
 
 template<typename T>
+inline T& Graph::GetAttr(const std::string& attr_name) {
+  auto it = attrs.find(attr_name);
+  CHECK(it != attrs.end())
+      << "Cannot find attribute " << attr_name << " in the graph";
+  return nnvm::get<T>(*it->second);
+}
+
+template<typename T>
 inline T Graph::MoveCopyAttr(const std::string& attr_name) {
   auto it = attrs.find(attr_name);
   CHECK(it != attrs.end())
@@ -231,6 +305,46 @@ inline T Graph::MoveCopyAttr(const std::string& attr_name) {
     return nnvm::get<T>(*sptr);
   }
 }
+template<typename T>
+inline const T& Graph::GetNodeAttr(
+    const std::string& attr_name, uint32_t nodeid) const {
+  const std::vector<T>& node_attrs = this->GetAttr<std::vector<T>>(
+      kNodeAttrPrefix + attr_name);
+  CHECK(nodeid < node_attrs.size());
+  return node_attrs[nodeid];
+}
+
+template<typename T>
+inline void Graph::SetNodeAttr(
+  const std::string& attr_name, uint32_t nodeid, const T& value) {
+  std::vector<T>& node_attrs = this->GetAttr<std::vector<T>>(
+      kNodeAttrPrefix + attr_name);
+  if (nodeid >= node_attrs.size()) {
+    node_attrs.resize(nodeid + 1);
+  }
+  node_attrs[nodeid] = value;
+}
+
+template<typename T>
+inline const T& Graph::GetNodeEntryAttr(
+    const std::string& attr_name, uint32_t entryid) const {
+  const std::vector<T>& entry_attrs = this->GetAttr<std::vector<T>>(
+      kNodeEntryAttrPrefix + attr_name);
+  CHECK(entryid < entry_attrs.size());
+  return entry_attrs[entryid];
+}
+
+template<typename T>
+inline void Graph::SetNodeEntryAttr(
+    const std::string& attr_name, uint32_t entryid, const T& value) {
+  std::vector<T>& entry_attrs = this->GetAttr<std::vector<T>>(
+      kNodeEntryAttrPrefix + attr_name);
+  if (entryid >= entry_attrs.size()) {
+    entry_attrs.resize(entryid + 1);
+  }
+  entry_attrs[entryid] = value;
+}
+
 
 template <typename GNode, typename HashType,
            typename FVisit, typename HashFunc,
