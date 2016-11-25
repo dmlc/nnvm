@@ -75,7 +75,7 @@ Graph InferAttr(Graph &&ret,
           CHECK(is >> rshape[out_ent_id]) << "Invalid attribute";
         }
       }
-    } if (is_backward.get(inode.source->op(), false)) {
+    } else if (is_backward.get(inode.source->op(), false)) {
       CHECK_GE(inode.control_deps.size(), 1)
         << "BackwardOp need to have control_deps to its forward op";
       const IndexedGraph::Node& fnode = idx[inode.control_deps[0]];
