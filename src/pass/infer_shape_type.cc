@@ -169,8 +169,10 @@ Graph InferAttr(Graph &&ret,
       }
     }
     num_unknown = 0;
-    for (size_t i = 0; i < idx.num_node_entries(); ++i) {
-      if (fis_none(rshape[i])) ++num_unknown;
+    for (size_t j = 0; j < idx.num_node_entries(); ++j) {
+      if (fis_none(rshape[j])) {
+        ++num_unknown;
+      }
     }
     if (num_unknown == 0) break;
   }
