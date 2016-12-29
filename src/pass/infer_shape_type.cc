@@ -6,7 +6,7 @@
 #include <nnvm/pass.h>
 #include <nnvm/op_attr_types.h>
 #include <nnvm/graph_attr_types.h>
-#include <csignal>
+
 namespace nnvm {
 namespace pass {
 namespace {
