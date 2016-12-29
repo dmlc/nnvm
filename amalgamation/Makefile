@@ -17,10 +17,10 @@ nnvm.d: nnvm.cc
 nnvm-all.cc: nnvm.d nnvm.cc
 	python ./amalgamation.py $+ $@
 
-nnvm_all.o: nnvm-all.cc
+nnvm-all.o: nnvm-all.cc
 	${CXX} ${CFLAGS} -fPIC -o $@ -c $+
 
-libnnvm.a: nnvm_all.o
+libnnvm.a: nnvm-all.o
 	ar rcs $@ $+
 
 clean:
