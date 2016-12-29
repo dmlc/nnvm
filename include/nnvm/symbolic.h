@@ -169,6 +169,15 @@ class Symbol {
    */
   std::unordered_map<std::string, std::string> ListAttrs(ListAttrOption option) const;
   /*!
+   * \brief Get attribute dictionary from the symbol and all children.
+   *
+   *  For grouped symbol, an error will be raised.
+   *
+   * \return The created attribute in format <operator_name, key, value>.
+   */
+  std::vector<std::tuple<std::string, std::string, std::string> >
+      ListAttrsRecursive() const;
+  /*!
    * \brief Create symbolic functor(AtomicSymbol) by given operator and attributes.
    * \param op The operator.
    * \param attrs The additional attributes.
