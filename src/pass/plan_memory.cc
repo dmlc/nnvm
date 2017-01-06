@@ -22,7 +22,7 @@ class GraphAllocator {
   // bad storage id
   static const StorageID kBadStorageID = -1;
   // external storage id
-  static const StorageID kExternalStorageID = -1;
+  static const StorageID kExternalStorageID = -2;
   // request a free storage
   StorageID Request(int dev_id, int dtype, TShape shape, uint32_t node_id) {
     if (shape.ndim() == 0) return kBadStorageID;
