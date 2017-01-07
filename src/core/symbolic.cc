@@ -259,7 +259,7 @@ void Symbol::Compose(const array_view<const Symbol*>& args,
                      const std::unordered_map<std::string, const Symbol*>& kwargs,
                      const std::string& name) {
   static auto& flist_inputs = Op::GetAttr<FListInputNames>("FListInputNames");
-  static auto& fset_attrs = Op::GetAttr<FSetInputVariableAttrs>("FSetInputVariableAttrs");
+  static auto& fset_attrs = Op::GetAttr<FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose");
 
   CHECK(!outputs[0].node->is_variable()) << "Variable cannot be composed";
   // parameter check.
@@ -325,7 +325,7 @@ void Symbol::Compose(const array_view<const Symbol*>& args,
     }
     UpdateNodeVersion(n);
 
-    FSetInputVariableAttrs fn = fset_attrs.get(n->op(), nullptr);
+    FSetInputVarAttrOnCompose fn = fset_attrs.get(n->op(), nullptr);
     if (fn != nullptr) {
       for (size_t i = 0; i < n->inputs.size(); ++i) {
         if (n->inputs[i].node->is_variable()) {

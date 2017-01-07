@@ -149,7 +149,7 @@ using FGradient = std::function<std::vector<NodeEntry>(
  *  \param var the input variable
  *  \param index index of var in all inputs
  */
-using FSetInputVariableAttrs = std::function<void(
+using FSetInputVarAttrOnCompose = std::function<void(
     const NodeAttrs& attrs,
     NodePtr var,
     const int index)>;
