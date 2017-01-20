@@ -33,7 +33,6 @@
 build
 lib
 *~
-dmlc-core
 cli_test
 *.pyc
 

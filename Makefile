@@ -13,6 +13,12 @@ export LDFLAGS = -pthread -lm
 export CFLAGS = -std=c++11 -Wall -O2 -msse2  -Wno-unknown-pragmas -funroll-loops\
 	 -Iinclude -fPIC
 
+ifdef DMLC_CORE_PATH
+  CFLAGS += -I$(DMLC_CORE_PATH)/include
+else
+  CFLAGS += -I$(ROOTDIR)/dmlc-core/include
+endif
+
 ifneq ($(ADD_CFLAGS), NONE)
 	CFLAGS += $(ADD_CFLAGS)
 endif
