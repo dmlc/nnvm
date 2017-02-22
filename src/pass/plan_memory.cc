@@ -61,12 +61,15 @@ class GraphAllocator {
     for (auto it = mid; it != begin;) {
       --it;
       StorageEntry *e = it->second;
+      if (e->id == kSharedPoolStorageID) {
+          continue;
+      }
       if (e->device_id != dev_id) continue;
       if (node_color_.size() != 0 &&
           node_color_[e->released_by_node] != node_color_[node_id]) continue;
       // Use exect matching strategy
       e->max_bytes = std::max(size, e->max_bytes);
-      // find a exact match, erase from map and return
+      // erase from map and return
       free_.erase(it);
       return e->id;
     }
@@ -91,14 +94,14 @@ class GraphAllocator {
   }
 
   // constructor
-  explicit GraphAllocator(const IndexedGraph* idx, const std::multimap<size_t, size_t> shared_pool) : idx_(idx) {
+  explicit GraphAllocator(const IndexedGraph* idx, const std::multimap<size_t, size_t>* shared_pool) : idx_(idx) {
     this->Init(dmlc::GetEnv("NNVM_EXEC_MATCH_RANGE", 16),
                dmlc::GetEnv("NNVM_EXEC_NUM_TEMP", 1), shared_pool);
   }
 
  private:
   // initialize the graph allocator
-  void Init(size_t match_range, uint32_t num_match_color, const std::multimap<size_t, size_t> shared_pool) {
+  void Init(size_t match_range, uint32_t num_match_color, const std::multimap<size_t, size_t>* shared_pool) {
     match_range_ = match_range;
     num_match_color_ = num_match_color;
     if (num_match_color_ > 1) {
@@ -112,13 +115,16 @@ class GraphAllocator {
     }
     // Init the free pool
     // This is not memory clean
-    for (auto &entry : shared_pool) {
-      //std::unique_ptr<StorageEntry> ptr(new StorageEntry());
-      StorageEntry* ptr = new StorageEntry();
-      ptr->id = kSharedPoolStorageID;
-      ptr->max_bytes = entry.first;
-      //delete(ptr);
-      free_.insert(std::make_pair(ptr->max_bytes, ptr));
+    // More indentation
+    if (shared_pool != nullptr) {
+     for (auto &entry : *shared_pool) {
+       //std::unique_ptr<StorageEntry> ptr(new StorageEntry());
+       StorageEntry* ptr = new StorageEntry();
+       ptr->id = kSharedPoolStorageID;
+       ptr->max_bytes = entry.first;
+       //delete(ptr);
+       free_.insert(std::make_pair(ptr->max_bytes, ptr));
+      }
     }
   }
 
@@ -198,11 +204,14 @@ Graph PlanMemory(Graph ret) {
   const ShapeVector& shape_vec = ret.GetAttr<ShapeVector>("shape");
   const DTypeVector& dtype_vec = ret.GetAttr<DTypeVector>("dtype");
   const DeviceVector* device_vec = nullptr;
-  const std::multimap<size_t, size_t>& shared_pool = ret.GetAttr< std::multimap<size_t, size_t> >("shared_pool");
+  const std::multimap<size_t, size_t>* shared_pool = nullptr;
   static auto& finplace_option = Op::GetAttr<FInplaceOption>("FInplaceOption");
 
   if (ret.attrs.count("device") != 0) {
     device_vec = &(ret.GetAttr<DeviceVector>("device"));
+  }
+  if (ret.attrs.count("shared_pool") != 0) {
+    shared_pool = &(ret.GetAttr< std::multimap<size_t, size_t> >("shared_pool"));
   }
   // the allocator.
   GraphAllocator allocator(&idx, shared_pool);
