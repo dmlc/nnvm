@@ -16,14 +16,9 @@ namespace {
 
 // simple graph based allocator.
 class GraphAllocator {
-
  public:
   // storage id equals integer.
   using StorageID = int;
-  // shared storage available in the format of <device_id, bytes> pairs
-  using SharedStorageEntry = std::pair<int, size_t>;
-  // a vector of shared storage entries
-  using SharedStorageEntryList = std::vector<SharedStorageEntry>;
 
   // bad storage id
   static const StorageID kBadStorageID = -1;
@@ -87,16 +82,13 @@ class GraphAllocator {
   }
 
   // constructor
-  explicit GraphAllocator(const IndexedGraph* idx, 
-    const SharedStorageEntryList* shared_pool, const size_t match_range) : idx_(idx) {
-    this->Init(match_range,
-               dmlc::GetEnv("NNVM_EXEC_NUM_TEMP", 1), shared_pool);
+  explicit GraphAllocator(const IndexedGraph* idx, const size_t match_range) : idx_(idx) {
+    this->Init(match_range, dmlc::GetEnv("NNVM_EXEC_NUM_TEMP", 1));
   }
 
  private:
   // initialize the graph allocator
-  void Init(const size_t match_range, const uint32_t num_match_color, 
-    const SharedStorageEntryList* shared_pool) {
+  void Init(const size_t match_range, const uint32_t num_match_color) {
     match_range_ = match_range;
     num_match_color_ = num_match_color;
     if (num_match_color_ > 1) {
@@ -108,21 +100,6 @@ class GraphAllocator {
       num_match_color_ = pass::ColorNodeGroup(
           *idx_, importance, num_match_color_, &node_color_);
     }
-    // Init the free memory pool
-    if (shared_pool != nullptr) {
-      for (auto& nd : *shared_pool) {
-        StorageID id = static_cast<StorageID>(data_.size());
-        std::unique_ptr<StorageEntry> ptr(new StorageEntry());
-        ptr->id = id;
-        ptr->device_id = nd.first;
-        ptr->max_bytes = nd.second;
-        data_.push_back(std::move(ptr));
-        StorageEntry *e = data_[id].get();
-        // set to dummy node.
-        e->released_by_node = node_color_.size() - 1;
-        free_.insert({e->max_bytes, e});
-      } 
-    } 
   }
 
   StorageID Alloc(int dev_id, size_t size) {
@@ -164,8 +141,9 @@ class GraphAllocator {
 /*
  * Internal method to perform the memory allocation for a graph
  * */
-size_t AllocMemory(Graph& ret, const IndexedGraph& idx, StorageVector& storage, 
-  std::vector<int>& storage_inplace_index, std::vector<uint32_t> ref_count, GraphAllocator& allocator) {
+size_t AllocMemory(const Graph& ret, const IndexedGraph& idx, StorageVector* storage,
+                   std::vector<int>* storage_inplace_index, std::vector<uint32_t> ref_count,
+                   GraphAllocator* allocator) {
   // Get attributes from the graph
   const ShapeVector& shape_vec = ret.GetAttr<ShapeVector>("shape");
   const DTypeVector& dtype_vec = ret.GetAttr<DTypeVector>("dtype");
@@ -188,14 +166,14 @@ size_t AllocMemory(Graph& ret, const IndexedGraph& idx, StorageVector& storage,
         uint32_t eid_in = idx.entry_id(inode.inputs[kv.first]);
         if (ref_count[eid_in] == 1 &&
             ref_count[eid_out] != 0 &&
-            storage[eid_out] == GraphAllocator::kBadStorageID &&
-            storage[eid_in] != GraphAllocator::kBadStorageID &&
+            (*storage)[eid_out] == GraphAllocator::kBadStorageID &&
+            (*storage)[eid_in] != GraphAllocator::kBadStorageID &&
             shape_vec[eid_out].Size() == shape_vec[eid_in].Size() &&
             dtype_vec[eid_out] == dtype_vec[eid_in]) {
           // inplace optimization
-          storage[eid_out] = storage[eid_in];
+          (*storage)[eid_out] = (*storage)[eid_in];
           ref_count[eid_in] = 0;
-          storage_inplace_index[eid_out] = kv.first;
+          (*storage_inplace_index)[eid_out] = kv.first;
         }
       }
     }
@@ -205,7 +183,7 @@ size_t AllocMemory(Graph& ret, const IndexedGraph& idx, StorageVector& storage,
     std::multimap<size_t, uint32_t> eids;
     for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
       uint32_t eid = idx.entry_id(nid, index);
-      if (storage[eid] == GraphAllocator::kBadStorageID) {
+      if ((*storage)[eid] == GraphAllocator::kBadStorageID) {
         auto &eshape = shape_vec[eid];
         size_t esize = 0;
         if (eshape.ndim() != 0) esize = eshape.Size();
@@ -213,9 +191,9 @@ size_t AllocMemory(Graph& ret, const IndexedGraph& idx, StorageVector& storage,
       }
     }
     std::multimap<size_t, uint32_t>::reverse_iterator rit;
-    for (rit=eids.rbegin(); rit!=eids.rend(); ++rit) {
+    for (rit = eids.rbegin(); rit != eids.rend(); ++rit) {
         uint32_t eid = rit->second;
-        storage[eid] = allocator.Request(dev_id, dtype_vec[eid], shape_vec[eid], nid);
+        (*storage)[eid] = allocator->Request(dev_id, dtype_vec[eid], shape_vec[eid], nid);
     }
 
     // check if certain inputs is ignored.
@@ -235,20 +213,20 @@ size_t AllocMemory(Graph& ret, const IndexedGraph& idx, StorageVector& storage,
       if (ref_count[eid] == 0) continue;
       // if we decrease it to zero, means we are ready to relase
       --ref_count[eid];
-      if (ref_count[eid] == 0 && storage[eid] != GraphAllocator::kBadStorageID) {
-        allocator.Release(storage[eid], nid);
+      if (ref_count[eid] == 0 && (*storage)[eid] != GraphAllocator::kBadStorageID) {
+        allocator->Release((*storage)[eid], nid);
       }
     }
     // check if there are outputs that can be freeded immediately
     // these output are not referenced by any operator.
     for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
       uint32_t eid = idx.entry_id(nid, index);
-      if (ref_count[eid] == 0 && storage[eid] != GraphAllocator::kBadStorageID) {
-        allocator.Release(storage[eid], nid);
+      if (ref_count[eid] == 0 && (*storage)[eid] != GraphAllocator::kBadStorageID) {
+        allocator->Release((*storage)[eid], nid);
         // use -2 to indicate that the node was never touched.
-        storage_inplace_index[eid] = -2;
+        (*storage_inplace_index)[eid] = -2;
       }
-      if (storage[eid] == GraphAllocator::kBadStorageID) {
+      if ((*storage)[eid] == GraphAllocator::kBadStorageID) {
         ++num_not_allocated;
       }
     }
@@ -291,26 +269,21 @@ Graph PlanMemory(Graph ret) {
     storage.resize(idx.num_node_entries(), -1);
   }
 
-  const GraphAllocator::SharedStorageEntryList* shared_pool = nullptr;
-  if (ret.attrs.count("shared_pool") != 0) {
-    shared_pool = &(ret.GetAttr<GraphAllocator::SharedStorageEntryList>("shared_pool"));
-  }
-
-  // Search the best NNVM_EXEC_MATCH_RANGE parameter
+  // Search the best NNVM_EXEC_MATCH_RANGE parameter. This is turned off by default
   size_t min_allocated_bytes = -1;
-  size_t max_exec_match_range = dmlc::GetEnv("NNVM_EXEC_MATCH_RANGE", 16);
-  for (size_t match_range = 1; match_range <= max_exec_match_range; match_range *= 2) {
-
+  size_t max_match_range = dmlc::GetEnv("NNVM_EXEC_MATCH_RANGE", 16);
+  size_t min_match_range = dmlc::GetEnv("NNVM_AUTO_SEARCH_MATCH_RANGE", false) ? 1 : max_match_range;
+  for (size_t match_range = min_match_range; match_range <= max_match_range; match_range *= 2) {
     // Make a copy of related fields
     StorageVector storage_vec(storage);
     std::vector<int> storage_inplace_index(idx.num_node_entries(), -1);
 
     // the allocator
-    GraphAllocator allocator(&idx, shared_pool, match_range);
-    
+    GraphAllocator allocator(&idx, match_range);
+
     // number of entries that are not statically allocated.
-    size_t storage_num_not_allocated = 
-      AllocMemory(ret, idx, storage_vec, storage_inplace_index, ref_count, allocator);
+    size_t storage_num_not_allocated =
+      AllocMemory(ret, idx, &storage_vec, &storage_inplace_index, ref_count, &allocator);
     size_t storage_allocated_bytes = allocator.TotalAllocBytes();
     if (min_allocated_bytes > storage_allocated_bytes) {
       ret.attrs["storage_id"] = std::make_shared<any>(std::move(storage_vec));
@@ -320,7 +293,6 @@ Graph PlanMemory(Graph ret) {
       min_allocated_bytes = storage_allocated_bytes;
     }
   }
-  
   return ret;
 }
 
@@ -332,8 +304,6 @@ NNVM_REGISTER_PASS(PlanMemory)
 .depend_graph_attr("shape")
 .provide_graph_attr("storage_id")
 .provide_graph_attr("storage_inplace_index");
-
-DMLC_JSON_ENABLE_ANY(GraphAllocator::SharedStorageEntryList, shared_storage_entry_list);
 
 }  // namespace
 }  // namespace pass
