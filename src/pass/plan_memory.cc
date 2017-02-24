@@ -118,8 +118,8 @@ class GraphAllocator {
         // set to dummy node.
         e->released_by_node = node_color_.size() - 1;
         free_.insert({e->max_bytes, e});
-      }
-    }
+      } 
+    } 
   }
 
   StorageID Alloc(int dev_id, size_t size) {
@@ -157,8 +157,9 @@ class GraphAllocator {
   // internal indexed graph
   const IndexedGraph* idx_;
 };
+
 /*
- * Add comment here
+ * Internal method to perform the memory allocation for a graph
  * */
 size_t AllocMemory(Graph& ret, const IndexedGraph& idx, StorageVector& storage, 
   std::vector<int>& storage_inplace_index, std::vector<uint32_t> ref_count, GraphAllocator& allocator) {
@@ -260,7 +261,6 @@ Graph PlanMemory(Graph ret) {
   // setup ref counter
   using SharedStorageEntry = std::pair<int, size_t>;
   const IndexedGraph& idx = ret.indexed_graph();
-  std::cout << "Perform planning" << std::endl;
   static auto& fignore_inputs = Op::GetAttr<FIgnoreInputs>("FIgnoreInputs");
   // reference counter of each node
   std::vector<uint32_t> ref_count(idx.num_node_entries(), 0);
@@ -295,9 +295,10 @@ Graph PlanMemory(Graph ret) {
   if (ret.attrs.count("shared_pool") != 0) {
     shared_pool = &(ret.GetAttr<std::vector<SharedStorageEntry>>("shared_pool"));
   }
+
+  // Search the best NNVM_EXEC_MATCH_RANGE parameter
   size_t min_allocated_bytes = -1;
   size_t max_exec_match_range = dmlc::GetEnv("NNVM_EXEC_MATCH_RANGE", 16);
-  // Search the best NNVM_EXEC_MATCH_RANGE parameter
   for (size_t match_range = 1; match_range <= max_exec_match_range; match_range *= 2) {
 
     // Make a copy of related fields
@@ -314,10 +315,9 @@ Graph PlanMemory(Graph ret) {
     if (min_allocated_bytes > storage_allocated_bytes) {
       ret.attrs["storage_id"] = std::make_shared<any>(std::move(storage_vec));
       ret.attrs["storage_inplace_index"] = std::make_shared<any>(std::move(storage_inplace_index));
-      ret.attrs["storage_allocated_bytes"] = std::make_shared<any>(storage_allocated_bytes); //allocator.TotalAllocBytes());
+      ret.attrs["storage_allocated_bytes"] = std::make_shared<any>(storage_allocated_bytes);
       ret.attrs["storage_num_not_allocated"] = std::make_shared<any>(storage_num_not_allocated);
       min_allocated_bytes = storage_allocated_bytes;
-      std::cout << "Found better val: " << match_range << std::endl;
     }
   }
   
