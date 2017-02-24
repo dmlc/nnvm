@@ -22,6 +22,8 @@ class GraphAllocator {
   using StorageID = int;
   // shared storage available in the format of <device_id, bytes> pairs
   using SharedStorageEntry = std::pair<int, size_t>;
+  // a vector of shared storage entries
+  using SharedStorageEntryList = std::vector<SharedStorageEntry>;
 
   // bad storage id
   static const StorageID kBadStorageID = -1;
@@ -74,6 +76,7 @@ class GraphAllocator {
     e->released_by_node = node_id;
     free_.insert({e->max_bytes, e});
   }
+
   // totoal number of bytes allocated
   size_t TotalAllocBytes() const {
     size_t total = 0;
@@ -85,7 +88,7 @@ class GraphAllocator {
 
   // constructor
   explicit GraphAllocator(const IndexedGraph* idx, 
-    const std::vector<SharedStorageEntry>* shared_pool, const size_t match_range) : idx_(idx) {
+    const SharedStorageEntryList* shared_pool, const size_t match_range) : idx_(idx) {
     this->Init(match_range,
                dmlc::GetEnv("NNVM_EXEC_NUM_TEMP", 1), shared_pool);
   }
@@ -93,7 +96,7 @@ class GraphAllocator {
  private:
   // initialize the graph allocator
   void Init(const size_t match_range, const uint32_t num_match_color, 
-    const std::vector<SharedStorageEntry>* shared_pool) {
+    const SharedStorageEntryList* shared_pool) {
     match_range_ = match_range;
     num_match_color_ = num_match_color;
     if (num_match_color_ > 1) {
@@ -198,8 +201,7 @@ size_t AllocMemory(Graph& ret, const IndexedGraph& idx, StorageVector& storage,
     }
     // normal allocation
     const int dev_id = (device_vec != nullptr) ? device_vec->at(nid) : 0;
-    // allocate output
-    // sort output nodes 
+    // sort output nodes based on size before allocating output
     std::multimap<size_t, uint32_t> eids;
     for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
       uint32_t eid = idx.entry_id(nid, index);
@@ -208,7 +210,6 @@ size_t AllocMemory(Graph& ret, const IndexedGraph& idx, StorageVector& storage,
         size_t esize = 0;
         if (eshape.ndim() != 0) esize = eshape.Size();
         eids.insert(std::make_pair(esize, eid));
-        //storage[eid] = allocator.Request(dev_id, dtype_vec[eid], shape_vec[eid], nid);
       }
     }
     std::multimap<size_t, uint32_t>::reverse_iterator rit;
@@ -259,7 +260,6 @@ size_t AllocMemory(Graph& ret, const IndexedGraph& idx, StorageVector& storage,
 // function to plan memory
 Graph PlanMemory(Graph ret) {
   // setup ref counter
-  using SharedStorageEntry = std::pair<int, size_t>;
   const IndexedGraph& idx = ret.indexed_graph();
   static auto& fignore_inputs = Op::GetAttr<FIgnoreInputs>("FIgnoreInputs");
   // reference counter of each node
@@ -291,9 +291,9 @@ Graph PlanMemory(Graph ret) {
     storage.resize(idx.num_node_entries(), -1);
   }
 
-  const std::vector<SharedStorageEntry>* shared_pool = nullptr;
+  const GraphAllocator::SharedStorageEntryList* shared_pool = nullptr;
   if (ret.attrs.count("shared_pool") != 0) {
-    shared_pool = &(ret.GetAttr<std::vector<SharedStorageEntry>>("shared_pool"));
+    shared_pool = &(ret.GetAttr<GraphAllocator::SharedStorageEntryList>("shared_pool"));
   }
 
   // Search the best NNVM_EXEC_MATCH_RANGE parameter
@@ -332,6 +332,8 @@ NNVM_REGISTER_PASS(PlanMemory)
 .depend_graph_attr("shape")
 .provide_graph_attr("storage_id")
 .provide_graph_attr("storage_inplace_index");
+
+DMLC_JSON_ENABLE_ANY(GraphAllocator::SharedStorageEntryList, shared_storage_entry_list);
 
 }  // namespace
 }  // namespace pass

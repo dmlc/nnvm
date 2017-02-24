@@ -88,7 +88,6 @@ def test_infer_shape_known_partial():
     assert g.json_attr('shape')[jnode_row_ptr[nindex["reshape1"]]] == [2, 4]
     assert g.json_attr('shape')[jnode_row_ptr[nindex["add1"]]] == [4, 2]
 
-
 def test_infer_type():
     x = sym.Variable('x', dtype=0)
     y = sym.add(x, x, name='add1')
@@ -130,6 +129,12 @@ def test_plan_memory():
     y = sym.add(y, y)
     g = graph.create(y)
     g._set_json_attr("shape_attr_key", "shape")
+    reused_bytes = 16
+    unused_bytes_1 = 1
+    unused_bytes_2 = 32
+    required_bytes = 64
+    g._set_json_attr("shared_pool", [(0,reused_bytes),(0, unused_bytes_1), (9,unused_bytes_2)], 
+      "shared_storage_entry_list")
     g = g.apply(["InferShape", "InferType", "PlanMemory"])
     jgraph = json.loads(g.apply('SaveJSON').json_attr('json'))
     jnodes = jgraph['nodes']
@@ -140,6 +145,8 @@ def test_plan_memory():
             storage_id[jnode_row_ptr[nindex["reshapek"]]])
     assert (storage_id[jnode_row_ptr[nindex["add2"]]] ==
             storage_id[jnode_row_ptr[nindex["reshapek"]]])
+    assert (jgraph['attrs']['storage_allocated_bytes'][1] == 
+            required_bytes + unused_bytes_1 + unused_bytes_2)
 
 
 if __name__ == "__main__":
