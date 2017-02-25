@@ -141,9 +141,13 @@ class GraphAllocator {
 /*
  * Internal method to perform the memory allocation for a graph
  * */
-size_t AllocMemory(const Graph& ret, const IndexedGraph& idx, StorageVector* storage,
-                   std::vector<int>* storage_inplace_index, std::vector<uint32_t> ref_count,
+size_t AllocMemory(const Graph& ret, const IndexedGraph& idx, StorageVector* storage_ptr,
+                   std::vector<int>* storage_inplace_index_ptr, std::vector<uint32_t> ref_count,
                    GraphAllocator* allocator) {
+  // Get reference
+  auto &storage = *storage_ptr;
+  auto &storage_inplace_index = *storage_inplace_index_ptr;
+
   // Get attributes from the graph
   const ShapeVector& shape_vec = ret.GetAttr<ShapeVector>("shape");
   const DTypeVector& dtype_vec = ret.GetAttr<DTypeVector>("dtype");
@@ -166,14 +170,14 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx, StorageVector* sto
         uint32_t eid_in = idx.entry_id(inode.inputs[kv.first]);
         if (ref_count[eid_in] == 1 &&
             ref_count[eid_out] != 0 &&
-            (*storage)[eid_out] == GraphAllocator::kBadStorageID &&
-            (*storage)[eid_in] != GraphAllocator::kBadStorageID &&
+            storage[eid_out] == GraphAllocator::kBadStorageID &&
+            storage[eid_in] != GraphAllocator::kBadStorageID &&
             shape_vec[eid_out].Size() == shape_vec[eid_in].Size() &&
             dtype_vec[eid_out] == dtype_vec[eid_in]) {
           // inplace optimization
-          (*storage)[eid_out] = (*storage)[eid_in];
+          storage[eid_out] = storage[eid_in];
           ref_count[eid_in] = 0;
-          (*storage_inplace_index)[eid_out] = kv.first;
+          storage_inplace_index[eid_out] = kv.first;
         }
       }
     }
@@ -183,17 +187,16 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx, StorageVector* sto
     std::multimap<size_t, uint32_t> eids;
     for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
       uint32_t eid = idx.entry_id(nid, index);
-      if ((*storage)[eid] == GraphAllocator::kBadStorageID) {
+      if (storage[eid] == GraphAllocator::kBadStorageID) {
         auto &eshape = shape_vec[eid];
         size_t esize = 0;
         if (eshape.ndim() != 0) esize = eshape.Size();
         eids.insert(std::make_pair(esize, eid));
       }
     }
-    std::multimap<size_t, uint32_t>::reverse_iterator rit;
-    for (rit = eids.rbegin(); rit != eids.rend(); ++rit) {
+    for (auto rit = eids.rbegin(); rit != eids.rend(); ++rit) {
         uint32_t eid = rit->second;
-        (*storage)[eid] = allocator->Request(dev_id, dtype_vec[eid], shape_vec[eid], nid);
+        storage[eid] = allocator->Request(dev_id, dtype_vec[eid], shape_vec[eid], nid);
     }
 
     // check if certain inputs is ignored.
@@ -213,20 +216,20 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx, StorageVector* sto
       if (ref_count[eid] == 0) continue;
       // if we decrease it to zero, means we are ready to relase
       --ref_count[eid];
-      if (ref_count[eid] == 0 && (*storage)[eid] != GraphAllocator::kBadStorageID) {
-        allocator->Release((*storage)[eid], nid);
+      if (ref_count[eid] == 0 && storage[eid] != GraphAllocator::kBadStorageID) {
+        allocator->Release(storage[eid], nid);
       }
     }
     // check if there are outputs that can be freeded immediately
     // these output are not referenced by any operator.
     for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
       uint32_t eid = idx.entry_id(nid, index);
-      if (ref_count[eid] == 0 && (*storage)[eid] != GraphAllocator::kBadStorageID) {
-        allocator->Release((*storage)[eid], nid);
+      if (ref_count[eid] == 0 && storage[eid] != GraphAllocator::kBadStorageID) {
+        allocator->Release(storage[eid], nid);
         // use -2 to indicate that the node was never touched.
-        (*storage_inplace_index)[eid] = -2;
+        storage_inplace_index[eid] = -2;
       }
-      if ((*storage)[eid] == GraphAllocator::kBadStorageID) {
+      if (storage[eid] == GraphAllocator::kBadStorageID) {
         ++num_not_allocated;
       }
     }
