@@ -272,7 +272,8 @@ Graph PlanMemory(Graph ret) {
   // Search the best NNVM_EXEC_MATCH_RANGE parameter. This is turned off by default
   size_t min_allocated_bytes = -1;
   size_t max_match_range = dmlc::GetEnv("NNVM_EXEC_MATCH_RANGE", 16);
-  size_t min_match_range = dmlc::GetEnv("NNVM_AUTO_SEARCH_MATCH_RANGE", false) ? 1 : max_match_range;
+  size_t min_match_range =
+         dmlc::GetEnv("NNVM_AUTO_SEARCH_MATCH_RANGE", false) ? 1 : max_match_range;
   for (size_t match_range = min_match_range; match_range <= max_match_range; match_range *= 2) {
     // Make a copy of related fields
     StorageVector storage_vec(storage);
@@ -285,6 +286,7 @@ Graph PlanMemory(Graph ret) {
     size_t storage_num_not_allocated =
       AllocMemory(ret, idx, &storage_vec, &storage_inplace_index, ref_count, &allocator);
     size_t storage_allocated_bytes = allocator.TotalAllocBytes();
+    // Choose the plan which leads to minimal memory usage
     if (min_allocated_bytes > storage_allocated_bytes) {
       ret.attrs["storage_id"] = std::make_shared<any>(std::move(storage_vec));
       ret.attrs["storage_inplace_index"] = std::make_shared<any>(std::move(storage_inplace_index));
