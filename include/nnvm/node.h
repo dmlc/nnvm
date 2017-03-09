@@ -41,6 +41,30 @@ struct NodeEntry {
   uint32_t version;
 };
 
+/** This lets you use a NodeEntry as a key in a unordered_map of the form
+ * unordered_map<NodeEntry, Foo, NodeEntryHash, NOdeEntryEqual> */
+struct NodeEntryHash {
+  size_t operator()(const NodeEntry& e) const {
+    return std::hash<Node*>()(e.node.get()) ^
+          (std::hash<size_t>()(e.index) << 1 >> 1) ^
+          (std::hash<size_t>()(e.version) << 1);
+  }
+};
+
+/** This lets you use a NodeEntry as a key in a unordered_map of the form
+ * unordered_map<NodeEntry, Foo, NodeEntryHash, NOdeEntryEqual> */
+struct NodeEntryEqual {
+  size_t operator()(const NodeEntry& a, const NodeEntry& b) const {
+    return (a.node.get() == b.node.get()) &&
+           (a.index == b.index) &&
+           (a.version == b.version);
+  }
+};
+
+/*! use a NodeEntry as a key in unordered_map */
+template<typename Foo>
+using NodeEntryMap = std::unordered_map<NodeEntry, Foo, NodeEntryHash, NodeEntryEqual>;
+
 /*!
  * \brief The attributes of the current operation node.
  *  Usually are additional parameters like axis,
