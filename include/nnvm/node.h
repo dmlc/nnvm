@@ -41,8 +41,10 @@ struct NodeEntry {
   uint32_t version;
 };
 
-/** This lets you use a NodeEntry as a key in a unordered_map of the form
- * unordered_map<NodeEntry, Foo, NodeEntryHash, NOdeEntryEqual> */
+/*!
+ * \brief This lets you use a NodeEntry as a key in a unordered_map of the form
+ * unordered_map<NodeEntry, ValueType, NodeEntryHash, NodeEntryEqual>
+ */
 struct NodeEntryHash {
   size_t operator()(const NodeEntry& e) const {
     return std::hash<Node*>()(e.node.get()) ^
@@ -51,8 +53,10 @@ struct NodeEntryHash {
   }
 };
 
-/** This lets you use a NodeEntry as a key in a unordered_map of the form
- * unordered_map<NodeEntry, Foo, NodeEntryHash, NOdeEntryEqual> */
+/*!
+ * \brief This lets you use a NodeEntry as a key in a unordered_map of the form
+ * unordered_map<NodeEntry, ValueType, NodeEntryHash, NodeEntryEqual>
+ */
 struct NodeEntryEqual {
   size_t operator()(const NodeEntry& a, const NodeEntry& b) const {
     return (a.node.get() == b.node.get()) &&
@@ -61,9 +65,9 @@ struct NodeEntryEqual {
   }
 };
 
-/*! use a NodeEntry as a key in unordered_map */
-template<typename Foo>
-using NodeEntryMap = std::unordered_map<NodeEntry, Foo, NodeEntryHash, NodeEntryEqual>;
+/*! use NodeEntry as key in unordered_map */
+template<typename ValueType>
+using NodeEntryMap = std::unordered_map<NodeEntry, ValueType, NodeEntryHash, NodeEntryEqual>;
 
 /*!
  * \brief The attributes of the current operation node.

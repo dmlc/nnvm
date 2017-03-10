@@ -172,7 +172,7 @@ class IndexedGraph {
     return outputs_;
   }
 
-  /*! \return whether a node is exist in the indexed graph */
+  /*! \return whether a node is existed in the indexed graph */
   inline bool exist(const nnvm::Node* node) const {
     return node2index_.count(node);
   }
