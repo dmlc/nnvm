@@ -100,11 +100,11 @@ Graph InferAttr(Graph &&ret,
       }
       // input gradient list
       auto igrad = fgrad[fwd_ptr->op()](fwd_ptr, ograd);
-      const Op* backward_op = inode.source->op();
+      const std::string backward_op = inode.source->attrs.name;
       const Node* igrad_node = nullptr;
       // Input gradient assignement
       for (size_t i = 0; i < igrad.size(); ++i) {
-        if (igrad[i].node->op() == backward_op) {
+        if (igrad[i].node->attrs.name == backward_op) {
           uint32_t eid = idx.entry_id(nid, igrad[i].index);
           if (fis_none(rshape[eid])) {
             rshape[eid] = rshape[idx.entry_id(fnode.inputs[i])];
