@@ -104,8 +104,7 @@ Graph InferAttr(Graph &&ret,
       const Node* igrad_node = nullptr;
       // Input gradient assignement
       for (size_t i = 0; i < igrad.size(); ++i) {
-        if (igrad[i].node->op() == inode.source->op() &&
-            igrad[i].node->attrs.name == inode.source->attrs.name) {
+        if (igrad[i].node->op() == inode.source->op()) {
           uint32_t eid = idx.entry_id(nid, igrad[i].index);
           if (fis_none(rshape[eid])) {
             rshape[eid] = rshape[idx.entry_id(fnode.inputs[i])];
