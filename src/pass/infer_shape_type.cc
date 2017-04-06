@@ -240,6 +240,19 @@ inline bool SameType(const NodeAttrs& attrs,
   return true;
 }
 
+NNVM_REGISTER_PASS(InferChunkType)
+.describe("Infer the chunk type of each node entries.")
+.set_body([](Graph ret) {
+    return InferAttr<int>(
+        std::move(ret), -1,
+        "FInferChunkType", "chunk_type_inputs", "chunk_type_attr_key",
+        "chunk_type", "chunk_type_num_unknown_nodes",
+        [](const int t) { return t == -1; },
+        SameType);
+  })
+.set_change_graph(false)
+.provide_graph_attr("chunk_type");
+
 NNVM_REGISTER_PASS(InferType)
 .describe("Infer the dtype of each node entries.")
 .set_body([](Graph ret) {
