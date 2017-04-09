@@ -240,6 +240,19 @@ inline bool SameType(const NodeAttrs& attrs,
   return true;
 }
 
+template <int N>
+inline bool DefaultType(const NodeAttrs& attrs,
+                     std::vector<int> *iattr,
+                     std::vector<int> *oattr) {
+  for (int& v : *oattr) {
+    if (v == -1) v = N;
+  }
+  for (int& v : *iattr) {
+    if (v == -1) v = N;
+  }
+  return true;
+}
+
 NNVM_REGISTER_PASS(InferChunkType)
 .describe("Infer the chunk type of each node entries.")
 .set_body([](Graph ret) {
@@ -248,7 +261,7 @@ NNVM_REGISTER_PASS(InferChunkType)
         "FInferChunkType", "chunk_type_inputs", "chunk_type_attr_key",
         "chunk_type", "chunk_type_num_unknown_nodes",
         [](const int t) { return t == -1; },
-        SameType);
+        DefaultType<1>);
   })
 .set_change_graph(false)
 .provide_graph_attr("chunk_type");
@@ -268,6 +281,7 @@ NNVM_REGISTER_PASS(InferType)
 
 DMLC_JSON_ENABLE_ANY(ShapeVector, list_shape);
 DMLC_JSON_ENABLE_ANY(DTypeVector, list_int);
+DMLC_JSON_ENABLE_ANY(ChunkTypeVector, list_int);
 DMLC_JSON_ENABLE_ANY(size_t, size_t);
 
 }  // namespace

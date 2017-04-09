@@ -98,7 +98,7 @@ inline Graph InferType(Graph graph,
 }
 
 inline Graph InferChunkType(Graph graph,
-                       DTypeVector chunk_type_inputs,
+                       ChunkTypeVector chunk_type_inputs,
                        std::string chunk_type_attr_key = "") {
   if (chunk_type_inputs.size() != 0) {
     graph.attrs["chunk_type_inputs"] = std::make_shared<any>(std::move(chunk_type_inputs));
