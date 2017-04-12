@@ -102,6 +102,20 @@ def test_infer_type():
     assert g.json_attr('dtype')[jnode_row_ptr[nindex["cast1"]]] == 1
     assert g.json_attr('dtype')[jnode_row_ptr[nindex["add1"]]] == 0
 
+
+def test_infer_chunk_type():
+    # Test the default chunk type inferred
+    x = sym.Variable('x')
+    y = sym.add(x, x, name='add1')
+    g = graph.create(y)
+    g._set_json_attr("chunk_type_attr_key", "chunk_type")
+    g = g.apply('InferChunkType')
+    jgraph = json.loads(g.apply('SaveJSON').json_attr('json'))
+    jnodes = jgraph['nodes']
+    jnode_row_ptr = jgraph['node_row_ptr']
+    nindex = {n['name']: i for i, n in enumerate(jnodes)}
+    assert g.json_attr('chunk_type')[jnode_row_ptr[nindex["add1"]]] == 1
+
 def test_place_device():
     x = sym.Variable('x', device_group="stage1")
     y = sym.add(x, x, name='add1')
@@ -149,6 +163,7 @@ if __name__ == "__main__":
     test_infer_shape()
     test_infer_shape_known_partial()
     test_infer_type()
+    test_infer_chunk_type()
     test_place_device()
     test_plan_memory()
     test_list_args()
