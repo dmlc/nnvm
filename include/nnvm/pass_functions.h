@@ -97,6 +97,15 @@ inline Graph InferType(Graph graph,
   return ApplyPass(std::move(graph), "InferType");
 }
 
+/*!
+ * \brief Infer storage types in the graph given the information.
+ * \param graph The input graph.
+ * \param storage_type_inputs The storage types of input symbols to the graph.
+ * \param storage_type_attr_key The key to the node attribute that can indicate storage types.
+                                This is the place where manual hint for types could be injected.
+ * \return A graph with new attribute "storage_type" containing inferred type of each NodeEntry.
+ *         The index of StorageTypeVector is given by graph.indexed_graph().entry_id.
+ */
 inline Graph InferStorageType(Graph graph,
                        StorageTypeVector storage_type_inputs,
                        std::string storage_type_attr_key = "") {

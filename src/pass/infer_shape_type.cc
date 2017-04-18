@@ -10,7 +10,7 @@
 namespace nnvm {
 namespace pass {
 namespace {
-
+// TODO(haibin) change file name to infer_attrs.cc
 template<typename AttrType, typename IsNone, typename FDefault>
 Graph InferAttr(Graph &&ret,
                 const AttrType empty_val,
@@ -240,6 +240,7 @@ inline bool SameType(const NodeAttrs& attrs,
   return true;
 }
 
+// assigning default type N to both input and output attrs with value -1
 template <int N>
 inline bool DefaultType(const NodeAttrs& attrs,
                      std::vector<int> *iattr,

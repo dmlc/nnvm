@@ -104,7 +104,7 @@ def test_infer_type():
 
 
 def test_infer_storage_type():
-    # Test the default chunk type inferred
+    # Test the default storage type inferred
     x = sym.Variable('x')
     y = sym.add(x, x, name='add1')
     g = graph.create(y)

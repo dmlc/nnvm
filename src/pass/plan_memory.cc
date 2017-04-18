@@ -154,8 +154,9 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx, StorageVector* sto
   const DeviceVector* device_vec = nullptr;
   static auto& finplace_option = Op::GetAttr<FInplaceOption>("FInplaceOption");
 
-  // If non-default chunk type is present, inplace option is disabled and memory is never
-  // released for every node
+  // If non-default storage type is present, inplace option is disabled and memory is never
+  // released for every node (temporarily)
+  // TODO(haibin) disable mem sharing locally instead of globally
   bool disable_mem_sharing = false;
   if (ret.attrs.count("dispatch_storage_type") != 0) {
     const auto& dispatch_storage_type = ret.GetAttr<int>("dispatch_storage_type");
