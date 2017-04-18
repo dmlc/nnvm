@@ -158,7 +158,7 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx, StorageVector* sto
   // released for every node
   bool disable_mem_sharing = false;
   if (ret.attrs.count("dispatch_storage_type") != 0) {
-    const auto& dispatch_storage_type = GetAttr<int>("dispatch_storage_type");
+    const auto& dispatch_storage_type = ret.GetAttr<int>("dispatch_storage_type");
     disable_mem_sharing = dispatch_storage_type != 1;
     // std::cout << "Mem sharing disabled." << std::endl;
   }
