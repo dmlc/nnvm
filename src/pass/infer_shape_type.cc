@@ -253,18 +253,18 @@ inline bool DefaultType(const NodeAttrs& attrs,
   return true;
 }
 
-NNVM_REGISTER_PASS(InferChunkType)
-.describe("Infer the chunk type of each node entries.")
+NNVM_REGISTER_PASS(InferStorageType)
+.describe("Infer the storage type of each node entries.")
 .set_body([](Graph ret) {
     return InferAttr<int>(
         std::move(ret), -1,
-        "FInferChunkType", "chunk_type_inputs", "chunk_type_attr_key",
-        "chunk_type", "chunk_type_num_unknown_nodes",
+        "FInferStorageType", "storage_type_inputs", "storage_type_attr_key",
+        "storage_type", "storage_type_num_unknown_nodes",
         [](const int t) { return t == -1; },
         DefaultType<1>);
   })
 .set_change_graph(false)
-.provide_graph_attr("chunk_type");
+.provide_graph_attr("storage_type");
 
 NNVM_REGISTER_PASS(InferType)
 .describe("Infer the dtype of each node entries.")
@@ -281,7 +281,7 @@ NNVM_REGISTER_PASS(InferType)
 
 DMLC_JSON_ENABLE_ANY(ShapeVector, list_shape);
 DMLC_JSON_ENABLE_ANY(DTypeVector, list_int);
-DMLC_JSON_ENABLE_ANY(ChunkTypeVector, list_int);
+DMLC_JSON_ENABLE_ANY(StorageTypeVector, list_int);
 DMLC_JSON_ENABLE_ANY(size_t, size_t);
 
 }  // namespace

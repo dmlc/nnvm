@@ -93,7 +93,7 @@ using FInferShape = FInferNodeEntryAttr<TShape>;
  */
 using FInferType = FInferNodeEntryAttr<int>;
 
-using FInferChunkType = FInferNodeEntryAttr<int>;
+using FInferStorageType = FInferNodeEntryAttr<int>;
 /*!
  * \brief Whether this op is an explicit backward operator,
  * If TIsBackward is true:

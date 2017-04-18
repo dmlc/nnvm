@@ -53,7 +53,7 @@ using ShapeVector = std::vector<TShape>;
  * \sa FInferType
  */
 using DTypeVector = std::vector<int>;
-using ChunkTypeVector = std::vector<int>;
+using StorageTypeVector = std::vector<int>;
 
 /*!
  * \brief The result holder of device of each operator in the graph.

@@ -154,6 +154,14 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx, StorageVector* sto
   const DeviceVector* device_vec = nullptr;
   static auto& finplace_option = Op::GetAttr<FInplaceOption>("FInplaceOption");
 
+  // If non-default chunk type is present, inplace option is disabled and memory is never
+  // released for every node
+  bool disable_mem_sharing = false;
+  if (ret.GetAttr<int>("dispatch_storage_type") != 1) {
+    disable_mem_sharing = true;
+    // std::cout << "Mem sharing disabled." << std::endl;
+  }
+
   if (ret.attrs.count("device") != 0) {
     device_vec = &(ret.GetAttr<DeviceVector>("device"));
   }
@@ -163,7 +171,7 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx, StorageVector* sto
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
     // check inplace option
-    if (finplace_option.count(inode.source->op()) != 0) {
+    if (finplace_option.count(inode.source->op()) != 0 && !disable_mem_sharing) {
       auto inplace_pairs = finplace_option[inode.source->op()](inode.source->attrs);
       for (auto& kv : inplace_pairs) {
         uint32_t eid_out = idx.entry_id(nid, kv.second);
@@ -216,7 +224,8 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx, StorageVector* sto
       if (ref_count[eid] == 0) continue;
       // if we decrease it to zero, means we are ready to relase
       --ref_count[eid];
-      if (ref_count[eid] == 0 && storage[eid] != GraphAllocator::kBadStorageID) {
+      if (ref_count[eid] == 0 && storage[eid] != GraphAllocator::kBadStorageID &&
+          !disable_mem_sharing) {
         allocator->Release(storage[eid], nid);
       }
     }
@@ -224,7 +233,8 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx, StorageVector* sto
     // these output are not referenced by any operator.
     for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
       uint32_t eid = idx.entry_id(nid, index);
-      if (ref_count[eid] == 0 && storage[eid] != GraphAllocator::kBadStorageID) {
+      if (ref_count[eid] == 0 && storage[eid] != GraphAllocator::kBadStorageID &&
+          !disable_mem_sharing) {
         allocator->Release(storage[eid], nid);
         // use -2 to indicate that the node was never touched.
         storage_inplace_index[eid] = -2;

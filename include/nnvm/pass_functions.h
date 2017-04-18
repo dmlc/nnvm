@@ -97,16 +97,16 @@ inline Graph InferType(Graph graph,
   return ApplyPass(std::move(graph), "InferType");
 }
 
-inline Graph InferChunkType(Graph graph,
-                       ChunkTypeVector chunk_type_inputs,
-                       std::string chunk_type_attr_key = "") {
-  if (chunk_type_inputs.size() != 0) {
-    graph.attrs["chunk_type_inputs"] = std::make_shared<any>(std::move(chunk_type_inputs));
+inline Graph InferStorageType(Graph graph,
+                       StorageTypeVector storage_type_inputs,
+                       std::string storage_type_attr_key = "") {
+  if (storage_type_inputs.size() != 0) {
+    graph.attrs["storage_type_inputs"] = std::make_shared<any>(std::move(storage_type_inputs));
   }
-  if (chunk_type_attr_key.length() != 0) {
-    graph.attrs["chunk_type_attr_key"] = std::make_shared<any>(std::move(chunk_type_attr_key));
+  if (storage_type_attr_key.length() != 0) {
+    graph.attrs["storage_type_attr_key"] = std::make_shared<any>(std::move(storage_type_attr_key));
   }
-  return ApplyPass(std::move(graph), "InferChunkType");
+  return ApplyPass(std::move(graph), "InferStorageType");
 }
 /*!
  * \brief Place the devices for each operator in the graph.
