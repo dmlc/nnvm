@@ -245,6 +245,7 @@ template <int N>
 inline bool DefaultType(const NodeAttrs& attrs,
                      std::vector<int> *iattr,
                      std::vector<int> *oattr) {
+  // LOG(INFO) << "DefaultType " << N;
   for (int& v : *oattr) {
     if (v == -1) v = N;
   }
