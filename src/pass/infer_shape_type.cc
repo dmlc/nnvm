@@ -10,7 +10,7 @@
 namespace nnvm {
 namespace pass {
 namespace {
-
+// TODO(haibin) change file name to infer_attrs.cc
 template<typename AttrType, typename IsNone, typename FDefault>
 Graph InferAttr(Graph &&ret,
                 const AttrType empty_val,
@@ -240,6 +240,34 @@ inline bool SameType(const NodeAttrs& attrs,
   return true;
 }
 
+// assigning default type N to both input and output attrs with value -1
+template <int N>
+inline bool DefaultType(const NodeAttrs& attrs,
+                     std::vector<int> *iattr,
+                     std::vector<int> *oattr) {
+  // LOG(INFO) << "DefaultType " << N;
+  for (int& v : *oattr) {
+    if (v == -1) v = N;
+  }
+  for (int& v : *iattr) {
+    if (v == -1) v = N;
+  }
+  return true;
+}
+
+NNVM_REGISTER_PASS(InferStorageType)
+.describe("Infer the storage type of each node entries.")
+.set_body([](Graph ret) {
+    return InferAttr<int>(
+        std::move(ret), -1,
+        "FInferStorageType", "storage_type_inputs", "storage_type_attr_key",
+        "storage_type", "storage_type_num_unknown_nodes",
+        [](const int t) { return t == -1; },
+        DefaultType<1>);
+  })
+.set_change_graph(false)
+.provide_graph_attr("storage_type");
+
 NNVM_REGISTER_PASS(InferType)
 .describe("Infer the dtype of each node entries.")
 .set_body([](Graph ret) {
@@ -255,6 +283,7 @@ NNVM_REGISTER_PASS(InferType)
 
 DMLC_JSON_ENABLE_ANY(ShapeVector, list_shape);
 DMLC_JSON_ENABLE_ANY(DTypeVector, list_int);
+DMLC_JSON_ENABLE_ANY(StorageTypeVector, list_int);
 DMLC_JSON_ENABLE_ANY(size_t, size_t);
 
 }  // namespace

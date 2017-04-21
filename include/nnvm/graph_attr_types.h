@@ -55,6 +55,21 @@ using ShapeVector = std::vector<TShape>;
 using DTypeVector = std::vector<int>;
 
 /*!
+ * \brief The result holder of storage type of each NodeEntry in the graph.
+ * \note Stored under graph.attrs["storage_type"], provided by Pass "InferStorageType"
+ *
+ * \code
+ *  Graph g = ApplyPass(src_graph, "InferStorageType");
+ *  const StorageVector& stypes = g.GetAttr<StorageTypeVector>("storage_type");
+ *  // get shape by entry id
+ *  int entry_type = stypes[g.indexed_graph().entry_id(my_entry)];
+ * \endcode
+ *
+ * \sa FInferStorageType
+ */
+using StorageTypeVector = std::vector<int>;
+
+/*!
  * \brief The result holder of device of each operator in the graph.
  * \note Stored under graph.attrs["device"], provided by Pass "PlaceDevice"
  *
