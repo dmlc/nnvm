@@ -114,7 +114,7 @@ def test_infer_storage_type():
     jnodes = jgraph['nodes']
     jnode_row_ptr = jgraph['node_row_ptr']
     nindex = {n['name']: i for i, n in enumerate(jnodes)}
-    assert g.json_attr('storage_type')[jnode_row_ptr[nindex["add1"]]] == 1
+    assert g.json_attr('storage_type')[jnode_row_ptr[nindex["add1"]]] == 0
 
 def test_place_device():
     x = sym.Variable('x', device_group="stage1")
