@@ -275,17 +275,19 @@ class Tuple {
   /*!
    * \brief save the content into binary stream
    * \param strm the output stream
+   * \tparam DType data type that save to
    * \tparam TStream any stream type that have write
    */
-  template<typename DType=ValueType, typename TStream>
+  template<typename DType = ValueType, typename TStream>
   inline void Save(TStream *strm) const;
   /*!
    * \brief load the content from binary stream
    * \param strm the output stream
+   * \tparam DType data type that load from
    * \tparam TStream any stream type that have write
    * \return whether the load is successful
    */
-  template<typename DType=ValueType, typename TStream>
+  template<typename DType = ValueType, typename TStream>
   inline bool Load(TStream *strm);
 
  protected:
