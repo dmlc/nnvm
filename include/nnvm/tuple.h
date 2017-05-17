@@ -548,6 +548,7 @@ inline TShape ShapeTypeCast(const SrcIter begin, const SrcIter end) {
   return res;
 }
 
+/*! \tparam ValueType The type of data stored inside tuple. */
 template<typename ValueType>
 template<typename DType, typename TStream>
 inline void Tuple<ValueType>::Save(TStream *strm) const {
@@ -561,6 +562,7 @@ inline void Tuple<ValueType>::Save(TStream *strm) const {
   }
 }
 
+/*! \tparam ValueType The type of data stored inside tuple. */
 template<typename ValueType>
 template<typename DType, typename TStream>
 inline bool Tuple<ValueType>::Load(TStream *strm) {
