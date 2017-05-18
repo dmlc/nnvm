@@ -260,14 +260,13 @@ NNVM_REGISTER_PASS(InferStorageType)
 .describe("Infer the storage type of each node entries.")
 .set_body([](Graph ret) {
     // for storage type, the backward attr is not necessarily the same as it's correspondence
-    const int none = -1;
     const int kDefaultStorage = 0;
     return InferAttr<int>(
-        std::move(ret), none,
+        std::move(ret), -1,
         "FInferStorageType", "storage_type_inputs", "storage_type_attr_key",
         "storage_type", "storage_type_num_unknown_nodes",
-        [](const int t) { return t == none; },
-        DefaultType<kDefaultStorage, none>, false);
+        [](const int t) { return t == -1; },
+        DefaultType<kDefaultStorage, -1>, false);
   })
 .set_change_graph(false)
 .provide_graph_attr("storage_type");
