@@ -17,6 +17,7 @@ namespace nnvm {
 
 // Forward declare node.
 class Node;
+class CodeGen;
 
 /*!
  * \brief we always used NodePtr for a reference pointer
@@ -91,6 +92,7 @@ struct NodeAttrs {
    * The object can be used to quickly access attributes.
    */
   any parsed;
+
 };
 
 /*!
@@ -107,6 +109,11 @@ class Node {
    *  Gives operation must be performed before this operation.
    */
   std::vector<NodePtr> control_deps;
+
+  // Can only be null if its op* is also null, which means it is a
+  // variable node.
+  std::shared_ptr<CodeGen> codegen{nullptr};
+
   /*! \brief destructor of node */
   ~Node();
   /*! \return operator in this node */

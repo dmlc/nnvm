@@ -12,6 +12,7 @@
 #include <functional>
 #include "./base.h"
 #include "./node.h"
+#include "./codegen.h"
 #include "./tuple.h"
 
 namespace nnvm {
@@ -153,6 +154,11 @@ using FSetInputVarAttrOnCompose = std::function<void(
     const NodeAttrs& attrs,
     NodePtr var,
     const int index)>;
+
+using FCodeGenCreator = std::function<std::shared_ptr<CodeGen>()>;
+
+using FBackwardCodeGenCreator = std::function<std::shared_ptr<CodeGen>(
+    const NodePtr& fwd_node)>;
 
 }  // namespace nnvm
 

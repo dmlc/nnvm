@@ -23,6 +23,7 @@ NodePtr CreateVariableNode(const std::string& name) {
   n->attrs.op = nullptr;
   n->attrs.name = name;
   n->attrs.parsed = VariableParam();
+  n->codegen = nullptr;
   return n;
 }
 
@@ -509,6 +510,7 @@ std::vector<std::tuple<std::string, std::string, std::string> >
 Symbol Symbol::CreateFunctor(const Op* op,
                              std::unordered_map<std::string, std::string> attrs) {
   static auto& fnum_vis_output = Op::GetAttr<FNumVisibleOutputs>("FNumVisibleOutputs");
+  static auto& fcodegen = Op::GetAttr<FCodeGenCreator>("FCodeGenCreator");
   Symbol s;
   NodePtr n = Node::Create();
   n->attrs.op = op;
@@ -516,6 +518,10 @@ Symbol Symbol::CreateFunctor(const Op* op,
   if (n->op()->attr_parser != nullptr) {
     n->op()->attr_parser(&(n->attrs));
   }
+  CHECK(fcodegen.count(op))
+    << "No code generator is registered for operator \""
+    << op->name << "\"";
+  n->codegen = fcodegen[op]();
 
   uint32_t nout = n->num_outputs();
   if (fnum_vis_output.count(n->op())) {
