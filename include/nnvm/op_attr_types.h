@@ -94,6 +94,14 @@ using FInferShape = FInferNodeEntryAttr<TShape>;
 using FInferType = FInferNodeEntryAttr<int>;
 
 /*!
+ * \brief Storage type inference function.
+ *  Update the type given the known type information.
+ *
+ * \note Register under "FInferStorageType",
+ *  by default set all the output types to 1.
+ */
+using FInferStorageType = FInferNodeEntryAttr<int>;
+/*!
  * \brief Whether this op is an explicit backward operator,
  * If TIsBackward is true:
  *   - The first control_deps of the node points to the corresponding forward operator.
