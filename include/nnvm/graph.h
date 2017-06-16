@@ -15,6 +15,7 @@
 #include "./base.h"
 #include "./node.h"
 #include "./symbolic.h"
+#include "./frame.h"
 
 namespace nnvm {
 
@@ -38,7 +39,9 @@ class Graph {
    *  Copy when shared_ptr.unique is not true, while reuse original space
    *  when shared_ptr.unique is true.
    */
-  std::unordered_map<std::string, std::shared_ptr<any> > attrs;
+  ColumnFrame node_attrs;
+  ColumnFrame node_entry_attrs;
+  Frame graph_attrs;
   /*!
    * \brief Get the immutable attribute from attrs.
    * \param attr_name the name of the attribute
