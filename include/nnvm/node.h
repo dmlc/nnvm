@@ -17,6 +17,7 @@ namespace nnvm {
 
 // Forward declare node.
 class Node;
+class Graph;
 
 /*!
  * \brief we always used NodePtr for a reference pointer
@@ -79,6 +80,8 @@ struct NodeAttrs {
    *  For place holder variable, op == nullptr.
    */
   const Op *op{nullptr};
+  /*! \brief Pointer to its subgraph structure. */
+  std::shared_ptr<Graph> graph{nullptr};
   /*! \brief name of the node */
   std::string name;
   /*! \brief Vector representation of positional attributes */
