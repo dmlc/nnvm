@@ -157,10 +157,6 @@ inline uint32_t Node::num_inputs() const {
   }
 }
 
-class GraphNode {
- public:
-};
-
 }  // namespace nnvm
 
 #endif  // NNVM_NODE_H_
