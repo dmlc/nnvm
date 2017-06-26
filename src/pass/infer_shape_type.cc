@@ -10,6 +10,11 @@
 namespace nnvm {
 namespace pass {
 namespace {
+
+/*!
+ * \brief This function has been copied to MXNet to support
+ * shape, type, and storage_type inferences.
+ */
 template<typename AttrType, typename IsNone, typename FDefault>
 Graph InferAttr(Graph &&ret,
                 const AttrType empty_val,
@@ -254,21 +259,6 @@ inline bool DefaultType(const NodeAttrs& attrs,
   }
   return true;
 }
-
-NNVM_REGISTER_PASS(InferStorageType)
-.describe("Infer the storage type of each node entries.")
-.set_body([](Graph ret) {
-    // for storage type, the backward attr is not necessarily the same as it's correspondence
-    const int kDefaultStorage = 0;
-    return InferAttr<int>(
-        std::move(ret), -1,
-        "FInferStorageType", "storage_type_inputs", "storage_type_attr_key",
-        "storage_type", "storage_type_num_unknown_nodes",
-        [](const int t) { return t == -1; },
-        DefaultType<kDefaultStorage, -1>, false);
-  })
-.set_change_graph(false)
-.provide_graph_attr("storage_type");
 
 NNVM_REGISTER_PASS(InferType)
 .describe("Infer the dtype of each node entries.")
