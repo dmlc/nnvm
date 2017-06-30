@@ -195,6 +195,9 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx, StorageVector* sto
           // inplace optimization
           taken[kv.first] = true;
           storage[eid_out] = sid_in;
+          // Reuse storage for output and add ref count of output
+          // to storage. This will get substracted later in free
+          // input section.
           storage_ref_count[sid_in] += entry_ref_count[eid_out];
           storage_inplace_index[eid_out] = kv.first;
         }
