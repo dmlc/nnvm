@@ -61,7 +61,7 @@ elseif(DMLC_CORE_PATH)
   include_directories(${DMLC_CORE_PATH}/include)
 endif()
 
-add_library(nnvm SHARED ${SOURCE})
+add_library(nnvm ${SOURCE})
 target_link_libraries(nnvm ${nnvm_LINKER_LIBS})
 
 if(INSTALL_INCLUDE_DIR)
@@ -70,6 +70,11 @@ if(INSTALL_INCLUDE_DIR)
     ${CMAKE_SOURCE_DIR}/include ${INSTALL_INCLUDE_DIR}/
     )
 endif()
+
+# ---[ Install the archive static lib
+install(TARGETS nnvm ARCHIVE DESTINATION lib LIBRARY DESTINATION lib) 
+install(DIRECTORY include DESTINATION .)
+install(DIRECTORY docs DESTINATION .)
 
 # ---[ Linter target
 if(MSVC)
