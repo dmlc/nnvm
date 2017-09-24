@@ -39,3 +39,6 @@ cli_test
 # Vim
 *.swp
 *.swo
+
+# TVM generated code
+perf
