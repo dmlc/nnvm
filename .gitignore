@@ -35,7 +35,9 @@ lib
 *~
 cli_test
 *.pyc
-
+.nv
+.cache
+docs.tgz
 # Vim
 *.swp
 *.swo
