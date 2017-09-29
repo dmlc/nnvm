@@ -44,3 +44,9 @@ docs.tgz
 
 # TVM generated code
 perf
+
+*.json
+*.params
+*.onnx
+synset.txt
+cat.jpg
