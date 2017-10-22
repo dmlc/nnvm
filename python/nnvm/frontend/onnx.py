@@ -248,9 +248,9 @@ class GraphProto(object):
             # from onnx v0.2, GraphProto.input has type ValueInfoProto,
             #  and the name is 'i.name'
             try:
-              i_name = i.name
+                i_name = i.name
             except AttributeError:
-              i_name = i
+                i_name = i
             if i_name in self._params:
                 # i is a param instead of input
                 name_param = 'param_{}'.format(self._num_param)
