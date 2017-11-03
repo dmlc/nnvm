@@ -134,7 +134,6 @@ def compute_conv2d_transpose(attrs, inputs, _):
     strides = attrs.get_int_tuple("strides")
     dilation = attrs.get_int_tuple("dilation")
     groups = attrs.get_int("groups")
-    channels = attrs.get_int("channels")
     layout = attrs["layout"]
     assert layout == "NCHW", "only support nchw for now"
     assert dilation == (1, 1), "not support dilate now"
@@ -145,7 +144,7 @@ def compute_conv2d_transpose(attrs, inputs, _):
         bias = topi.expand_dims(bias, axis=1, num_newaxis=2)
         out = topi.broadcast_add(out, bias)
     output_padding = attrs.get_int_tuple("output_padding")
-    out = topi.nn.pad(out,
+    out = topi.nn.pad(out, \
         [0, 0, 0, 0], [0, 0, output_padding[0], output_padding[1]])
     return out
 
