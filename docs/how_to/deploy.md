@@ -35,3 +35,84 @@ out = tvm.nd.empty(shape)
 get_output(0, out)
 print(out.asnumpy())
 ```
+
+An example in c++.
+```cpp
+#include <dlpack/dlpack.h>
+#include <tvm/runtime/module.h>
+#include <tvm/runtime/registry.h>
+#include <tvm/runtime/packed_func.h>
+
+#include <fstream>
+#include <algorithm>
+
+int main()
+{
+    // tvm module for compiled functions
+    tvm::runtime::Module mod_dylib = tvm::runtime::Module::LoadFromFile("deploy.so");
+
+    // json graph
+    std::ifstream json_in("deploy.json", std::ios::in);
+    std::stringstream json_ss;
+    json_ss << json_in.rdbuf();
+    std::string json_data = json_ss.str();
+    json_in.close();
+
+    // parameters in binary
+    std::ifstream params_in("deploy.params", std::ios::binary);
+    std::stringstream params_ss;
+    params_ss << params_in.rdbuf();
+    std::string params_data = params_ss.str();
+    params_in.close();
+
+    // parameters need to be TVMByteArray type to indicate the binary data
+    TVMByteArray params_arr;
+    params_arr.data = params_data.c_str();
+    params_arr.size = params_data.length();
+
+    // get global function module for graph runtime
+    tvm::runtime::Module mod = (*tvm::runtime::Registry::Get("tvm.graph_runtime.create"))(json_data, mod_dylib, 1, 0);
+
+    int dtype_code = kFloat;
+    int dtype_bits = 32;
+    int dtype_lanes = 1;
+    int device_type = kCPU;
+    int device_id = 0;
+
+    DLTensor* x;
+    int in_ndim = 4;
+    int64_t in_shape[4] = {1, 3, 224, 224};
+    TVMArrayAlloc(in_shape, in_ndim, dtype_code, dtype_bits, dtype_lanes, device_type, device_id, &x);
+    // load image data saved in binary
+    std::ifstream data_fin("cat.bin", std::ios::binary);
+    data_fin.read(static_cast<char*>(x->data), 3 * 224 * 224 * 4);
+
+    // get the function from the module(set input data)
+    tvm::runtime::PackedFunc set_input = mod.GetFunction("set_input");
+    set_input("data", x);
+
+    // get the function from the module(load patameters)
+    tvm::runtime::PackedFunc load_params = mod.GetFunction("load_params");
+    load_params(params_arr);
+
+    // get the function from the module(run it)
+    mod.GetFunction("run")();
+
+    DLTensor* y;
+    int64_t out_shape[1] = {1000, };
+    int out_ndim = 1;
+    TVMArrayAlloc(out_shape, out_ndim, dtype_code, dtype_bits, dtype_lanes, device_type, device_id, &y);
+
+    // get the function from the module(get output data)
+    tvm::runtime::PackedFunc get_output = mod.GetFunction("get_output");
+    get_output(0, y);
+
+    // get the maximum position in output vector
+    std::vector<float> output(static_cast<float*>(y->data), static_cast<float*>(y->data) + 1000);
+    auto max_iter = std::max_element(output.begin(), output.end());
+    auto max_index = std::distance(output.begin(), max_iter);
+    std::cout << "The maximum position in output vector is: " << max_index << std::endl;
+
+    return 0;
+}
+```
