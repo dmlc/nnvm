@@ -358,8 +358,13 @@ def from_mxnet(symbol, arg_params=None, aux_params=None):
         sym = symbol(data)
         sym = _from_mxnet_impl(sym, {})
         params = {}
-        for k, v in symbol.collect_params().items():
-            params[k] = tvm.nd.array(v.data().asnumpy())
+        for block in symbol._children:
+            for (k, v) in block.collect_params().items():
+                np_arr = v.data().asnumpy()
+                if hasattr(block, "_op_name") and block._op_name == "Deconvolution":
+                    params[k] = np_arr.swapaxes(0, 1)
+                else:
+                    params[k] = np_arr
     elif isinstance(symbol, mx.gluon.Block):
         raise NotImplementedError("Only Hybrid Blocks are supported now.")
     else:
