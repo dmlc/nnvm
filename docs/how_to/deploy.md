@@ -45,6 +45,7 @@ An example in c++.
 
 #include <fstream>
 #include <sstream>
+#include <iterator>
 #include <algorithm>
 
 int main()
@@ -54,16 +55,12 @@ int main()
 
     // json graph
     std::ifstream json_in("deploy.json", std::ios::in);
-    std::stringstream json_ss;
-    json_ss << json_in.rdbuf();
-    std::string json_data = json_ss.str();
+    std::string json_data((std::istreambuf_iterator<char>(json_in)), std::istreambuf_iterator<char>());
     json_in.close();
 
     // parameters in binary
     std::ifstream params_in("deploy.params", std::ios::binary);
-    std::stringstream params_ss;
-    params_ss << params_in.rdbuf();
-    std::string params_data = params_ss.str();
+    std::string params_data((std::istreambuf_iterator<char>(params_in)), std::istreambuf_iterator<char>());
     params_in.close();
 
     // parameters need to be TVMByteArray type to indicate the binary data
