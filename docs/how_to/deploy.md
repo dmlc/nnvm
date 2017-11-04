@@ -44,7 +44,6 @@ An example in c++.
 #include <tvm/runtime/packed_func.h>
 
 #include <fstream>
-#include <sstream>
 #include <iterator>
 #include <algorithm>
 
@@ -98,8 +97,8 @@ int main()
     run();
 
     DLTensor* y;
-    int64_t out_shape[1] = {1000, };
     int out_ndim = 1;
+    int64_t out_shape[1] = {1000, };
     TVMArrayAlloc(out_shape, out_ndim, dtype_code, dtype_bits, dtype_lanes, device_type, device_id, &y);
 
     // get the function from the module(get output data)
