@@ -44,6 +44,7 @@ An example in c++.
 #include <tvm/runtime/packed_func.h>
 
 #include <fstream>
+#include <sstream>
 #include <algorithm>
 
 int main()
@@ -96,7 +97,8 @@ int main()
     load_params(params_arr);
 
     // get the function from the module(run it)
-    mod.GetFunction("run")();
+    tvm::runtime::PackedFunc run = mod.GetFunction("run");
+    run();
 
     DLTensor* y;
     int64_t out_shape[1] = {1000, };
@@ -108,10 +110,13 @@ int main()
     get_output(0, y);
 
     // get the maximum position in output vector
-    std::vector<float> output(static_cast<float*>(y->data), static_cast<float*>(y->data) + 1000);
-    auto max_iter = std::max_element(output.begin(), output.end());
-    auto max_index = std::distance(output.begin(), max_iter);
+    auto y_iter = static_cast<float*>(y->data);
+    auto max_iter = std::max_element(y_iter, y_iter + 1000);
+    auto max_index = std::distance(y_iter, max_iter);
     std::cout << "The maximum position in output vector is: " << max_index << std::endl;
+
+    TVMArrayFree(x);
+    TVMArrayFree(y);
 
     return 0;
 }
