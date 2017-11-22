@@ -98,7 +98,12 @@ GraphFunc GraphLower(Graph graph,
  */
 int GetTypeFlag(tvm::Type type);
 
-// convert from type flag to tvm type.
+/*!
+ * \brief Get TVM Type from type flag
+ *
+ * \param type_flag the type flag
+ * \return corresponding TVM type
+ */
 tvm::Type GetTVMType(int type_flag);
 
 }  // namespace compiler

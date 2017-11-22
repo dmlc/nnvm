@@ -55,7 +55,7 @@ Type GetTVMType(int type_flag) {
     case 6:
       return tvm::Int(64);
     case 7:
-      return tvm::Int(64);
+      return tvm::Int(16);
     default:
       LOG(FATAL) << "unknown type_flag=" << type_flag;
       return Float(32);
