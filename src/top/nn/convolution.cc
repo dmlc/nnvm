@@ -152,9 +152,9 @@ inline bool Conv2DTransposeInferShape(const nnvm::NodeAttrs& attrs,
 
   TShape wshape({dshape_nchw[1],
                  param.channels / param.groups,
-                 param.kernel_size[0], param.kernel_size[1]});
+                 param.kernel_size[0],
+                 param.kernel_size[1]});
   wshape = ConvertLayout(wshape, kNCHW, param.layout);
-
   NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, Conv2DTransposeParam::kWeight, wshape);
 
   if (param.use_bias) {
@@ -189,7 +189,7 @@ said convolution.
 
 - **data**: This depends on the `layout` parameter. Input is 4D array of shape
             (batch_size, in_channels, height, width) if `layout` is `NCHW`.
-- **weight**: (channels, in_channels, kernel_size[0], kernel_size[1])
+- **weight**: (in_channels, channels, kernel_size[0], kernel_size[1])
 - **bias**: (channels,)
 - **out**:  This depends on the `layout` parameter. Output is 4D array of shape
             (batch_size, channels, out_height, out_width) if `layout` is `NCHW`.
