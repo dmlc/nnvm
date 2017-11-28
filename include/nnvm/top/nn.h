@@ -26,6 +26,13 @@ enum LayoutFlag {
   kCDHWN
 };
 
+// Type of same padding for pooling
+enum SamePaddingFlag {
+  kSameNone,
+  kBottomRightHeavy,
+  kTopLeftHeavy
+};
+
 struct DenseParam : public dmlc::Parameter<DenseParam> {
   int units;
   bool use_bias;
@@ -204,6 +211,7 @@ struct Pool2DParam : public dmlc::Parameter<Pool2DParam> {
   TShape padding;
   int layout;
   bool ceil_mode;
+  int same_padding_mode;
 
   DMLC_DECLARE_PARAMETER(Pool2DParam) {
     DMLC_DECLARE_FIELD(pool_size)
@@ -223,6 +231,13 @@ struct Pool2DParam : public dmlc::Parameter<Pool2DParam> {
                 "'W' dimensions.");
     DMLC_DECLARE_FIELD(ceil_mode).set_default(false)
       .describe("When true, will use ceil instead of floor to compute the output shape.");
+    DMLC_DECLARE_FIELD(same_padding_mode)
+      .add_enum("NONE", kSameNone)
+      .add_enum("BOTTOM_RIGHT_HEAVY", kBottomRightHeavy)
+      .add_enum("TOP_LEFT_HEAVY", kTopLeftHeavy)
+      .set_default(kSameNone)
+      .describe("When true, will select output size to process all input, "
+                "taking into account pool_size, strides and input size");
   }
 };
 

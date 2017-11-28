@@ -37,7 +37,10 @@ inline bool Pool2DInferShape(const nnvm::NodeAttrs& attrs,
       << "pool size (" << param.pool_size[1] << ") exceeds input (" << dshape[3]
       << " padded to " << (dshape[3] + 2*param.padding[1]) << ")";
 
-  if (!param.ceil_mode) {
+  if (param.same_padding_mode != kSameNone) {
+    oshape[2] = (dshape[2] + param.padding[0] + param.strides[0] - 1) / param.strides[0];
+    oshape[3] = (dshape[3] + param.padding[1] + param.strides[1] - 1) / param.strides[1];
+  } else if (!param.ceil_mode) {
     oshape[2] = ((dshape[2] + 2 * param.padding[0] - param.pool_size[0]) /
                  param.strides[0]) + 1;
     oshape[3] = ((dshape[3] + 2 * param.padding[1] - param.pool_size[1]) /
