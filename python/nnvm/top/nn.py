@@ -163,10 +163,18 @@ def compute_max_pool2d(attrs, inputs, _):
     """Compute definition of max_pool2d"""
     pool_size = attrs.get_int_tuple("pool_size")
     strides = attrs.get_int_tuple("strides")
-    padding = attrs.get_int_tuple("padding")
+    same_padding_mode = attrs["same_padding_mode"]
+    if same_padding_mode == "TOP_LEFT_HEAVY":
+        padding = "SAME"
+    elif same_padding_mode == "BOTTOM_RIGHT_HEAVY":
+        padding = "SAME_BOTTOM_RIGHT_HEAVY"
+    else:
+        padding = attrs.get_int_tuple("padding")
     layout = attrs["layout"]
     ceil_mode = attrs.get_bool("ceil_mode")
     assert layout == "NCHW", "only support nchw for now"
+
+
     return topi.nn.pool(inputs[0], pool_size, strides, padding,
                         pool_type='max', ceil_mode=ceil_mode)
 
@@ -185,7 +193,13 @@ def compute_avg_pool2d(attrs, inputs, _):
     """Compute definition of avg_pool2d"""
     pool_size = attrs.get_int_tuple("pool_size")
     strides = attrs.get_int_tuple("strides")
-    padding = attrs.get_int_tuple("padding")
+    same_padding_mode = attrs["same_padding_mode"]
+    if same_padding_mode == "BOTTOM_RIGHT_HEAVY":
+        padding = "SAME"
+    elif same_padding_mode == "TOP_LEFT_HEAVY":
+        padding = "SAME_TOP_LEFT_HEAVY"
+    else:
+        padding = attrs.get_int_tuple("padding")
     layout = attrs["layout"]
     ceil_mode = attrs.get_bool("ceil_mode")
     assert layout == "NCHW", "only support nchw for now"

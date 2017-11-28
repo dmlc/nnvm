@@ -202,6 +202,14 @@ def PoolingLayerParams(op, insym, symtab):
             padding = list(valid.paddingAmounts)
             params['padding'] = padding
             params['ceil_mode'] = True
+        elif op.WhichOneof('PoolingPaddingType') == 'same':
+            same = op.same
+            if same.asymmetryMode == 0:
+	            params['same_padding_mode'] = 'BOTTOM_RIGHT_HEAVY'
+            elif same.asymmetryMode == 1:
+                params['same_padding_mode'] = 'TOP_LEFT_HEAVY'
+            else:
+                raise NotImplementedError("Onlu BOTTOM_RIGHT_HEAVY and TOP_LEFT_HEAVY same mode are supported")
         else:
             raise NotImplementedError("Other convolution padding not implemented")
 
@@ -269,6 +277,12 @@ def PaddingLayerParams(op, insym, symtab):
         raise NotImplementedError("Only constant padding is supported now.")
     return insym
 
+def PermuteLayerParams(op, insym, symtab):
+    axes = tuple(op.axis)
+    return _sym.transpose(insym, axes=axes)
+
+
+
 _convert_map = {
     'NeuralNetworkMeanImage': NeuralNetworkMeanImage,
     'NeuralNetworkImageScaler': NeuralNetworkImageScaler,
@@ -283,6 +297,7 @@ _convert_map = {
     'FlattenLayerParams':FlattenLayerParams,
     'ConcatLayerParams':ConcatLayerParams,
     'PaddingLayerParams':PaddingLayerParams,
+    'PermuteLayerParams':PermuteLayerParams,
 }
 
 def coreml_op_to_nnvm(op, inname, outname, symtab):
