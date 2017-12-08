@@ -206,7 +206,7 @@ class Symbol(SymbolBase):
         _check_call(_LIB.NNSymbolGetChildren(
             self.handle, _ctypes.byref(handle)))
         ret = Symbol(handle=handle)
-        if len(ret.list_output_names()) == 0:
+        if not ret.list_output_names():
             return None
         return ret
 
