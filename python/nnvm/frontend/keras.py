@@ -2,9 +2,8 @@
 """Keras frontend."""
 from __future__ import absolute_import as _abs
 import numpy as np
-import six
 import tvm
-import keras as _keras
+import sys
 from .. import symbol as _sym
 from .common import SymbolTable
 
@@ -14,50 +13,58 @@ __all__ = ['from_keras']
 def _check_data_format(keras_layer):
     if hasattr(keras_layer, ('data_format')):
         if keras_layer.data_format != 'channels_last':
-            raise ValueError("Keras frontend currently supports data_format = 'channels_last' only.")
+            raise ValueError("Keras frontend currently supports data_format = channels_last only.")
 
 
 def convert_activation(insym, keras_layer, symtab):
-    if isinstance(keras_layer, _keras.layers.advanced_activations.LeakyReLU):
-        return _sym.leaky_relu(insym, alpha=keras_layer.alpha)
-    elif isinstance(keras_layer, _keras.layers.advanced_activations.ELU):
-        return _sym.__mul_scalar__(_sym.__add_scalar__(_sym.exp(insym), scalar=-1),
-            scalar=keras_layer.alpha)
-    elif isinstance(keras_layer, _keras.layers.advanced_activations.PReLU):
-        raise NotImplementedError('PReLU not implemented')
-    elif isinstance(keras_layer, _keras.layers.advanced_activations.ThresholdedReLU):
-        raise NotImplementedError('ThresholdedReLU not implemented')
+    if isinstance(keras_layer, (str, unicode)):
+        act_name = keras_layer
     else:
-        import six
-        if six.PY2:
+        if sys.version_info.major < 3:
             act_name = keras_layer.activation.func_name
         else:
             act_name = keras_layer.activation.__name__
-
-        if act_name == 'softmax':
-            return _sym.softmax(insym)
-        elif act_name == 'sigmoid':
-            return _sym.sigmoid(insym)
-        elif act_name == 'tanh':
-            return _sym.tanh(insym)
-        elif act_name == 'relu':
-            return _sym.relu(insym)
-        elif act_name == 'softplus':
-            return _sym.log(_sym.__add_scalar__(_sym.exp(insym), scalar=1))
-        elif act_name == 'elu':
-            return _sym.__mul_scalar__(_sym.__add_scalar__(_sym.exp(insym),
-                scalar=-1), scalar=1)
-        elif act_name == 'linear':
+    if act_name == 'linear':
+        if isinstance(keras_layer, (str, unicode)):
+            return insym
+        else:
             return _sym.__add_scalar__(_sym.__mul_scalar__(insym,
                 scalar=keras_layer.alpha), scalar=keras_layer.beta)
-        elif act_name == 'relu6':
-            raise NotImplementedError('relu6 not implemented')
-        elif act_name == 'softsign':
-            raise NotImplementedError('softsign not implemented')
-        elif act_name == 'hard_sigmoid':
-            raise NotImplementedError('hard_sigmoid not implemented')
-        else:
-            raise TypeError("Unsupported activation type : {}".format(act_name))
+    elif act_name == 'softmax':
+        return _sym.softmax(insym)
+    elif act_name == 'sigmoid':
+        return _sym.sigmoid(insym)
+    elif act_name == 'tanh':
+        return _sym.tanh(insym)
+    elif act_name == 'relu':
+        return _sym.relu(insym)
+    elif act_name == 'softplus':
+        return _sym.log(_sym.__add_scalar__(_sym.exp(insym), scalar=1))
+    elif act_name == 'elu':
+        return _sym.__mul_scalar__(_sym.__add_scalar__(_sym.exp(insym), scalar=-1), scalar=1)
+    elif act_name == 'relu6':
+        raise NotImplementedError('relu6 not implemented')
+    elif act_name == 'softsign':
+        raise NotImplementedError('softsign not implemented')
+    elif act_name == 'hard_sigmoid':
+        raise NotImplementedError('hard_sigmoid not implemented')
+    else:
+        raise TypeError("Unsupported activation type : {}".format(act_name))
+
+
+def convert_advanced_activation(insym, keras_layer, symtab):
+    act_name = type(keras_layer).__name__
+    if act_name == 'LeakyReLU':
+        return _sym.leaky_relu(insym, alpha=keras_layer.alpha)
+    elif act_name == 'ELU':
+        return _sym.__mul_scalar__(_sym.__add_scalar__(_sym.exp(insym), scalar=-1),
+            scalar=keras_layer.alpha)
+    elif act_name == 'PReLU':
+        raise NotImplementedError('PReLU not implemented')
+    elif act_name == 'ThresholdedReLU':
+        raise NotImplementedError('ThresholdedReLU not implemented')
+    else:
+        raise TypeError("Unsupported advanced activation type : {}".format(act_name))
 
 
 def convert_dense(insym, keras_layer, symtab):
@@ -66,21 +73,22 @@ def convert_dense(insym, keras_layer, symtab):
     params = {'weight':weight, 'use_bias':False, 'units':weightList[0].shape[1]}
     if keras_layer.use_bias:
         params['use_bias'] = True
-        bias = symtab.new_const(weightList[1])
-        params['bias'] = bias
+        params['bias'] = symtab.new_const(weightList[1])
     dense = _sym.dense(data=insym, **params)
     # defuse activation
-    act_name = keras_layer.activation.func_name if six.PY2 else keras_layer.activation.__name__
+    if sys.version_info.major < 3:
+        act_name = keras_layer.activation.func_name
+    else:
+        act_name = keras_layer.activation.__name__
     if act_name != 'linear':
-        act_layer = _keras.layers.core.Activation(act_name)
-        dense = convert_activation(dense, act_layer, symtab)
+        dense = convert_activation(dense, act_name, symtab)
     return dense
 
 
 def convert_convolution(insym, keras_layer, symtab):
     # TODO: same padding fails when strides > 1
     _check_data_format(keras_layer)
-    is_deconv = isinstance(keras_layer, _keras.layers.convolutional.Conv2DTranspose)
+    is_deconv = type(keras_layer).__name__ == 'Conv2DTranspose'
     weightList = keras_layer.get_weights()
     if is_deconv:
         height, width, n_filters, in_channels = weightList[0].shape
@@ -94,7 +102,7 @@ def convert_convolution(insym, keras_layer, symtab):
     else:
         dilation = [keras_layer.dilation_rate, keras_layer.dilation_rate]
     groups = 1
-    if isinstance(keras_layer, _keras.applications.mobilenet.DepthwiseConv2D):
+    if type(keras_layer).__name__ == 'DepthwiseConv2D':
         groups = in_channels
         depth_multiplier = keras_layer.depth_multiplier
         weight = np.reshape(weight, (in_channels, depth_multiplier, height, width))
@@ -126,10 +134,12 @@ def convert_convolution(insym, keras_layer, symtab):
     else:
         out = _sym.conv2d(data=insym, **params)
     # defuse activation
-    act_name = keras_layer.activation.func_name if six.PY2 else keras_layer.activation.__name__
+    if sys.version_info.major < 3:
+        act_name = keras_layer.activation.func_name
+    else:
+        act_name = keras_layer.activation.__name__
     if act_name != 'linear':
-        act_layer = _keras.layers.core.Activation(act_name)
-        out = convert_activation(out, act_layer, symtab)
+        out = convert_activation(out, act_name, symtab)
     return out
 
 
@@ -172,18 +182,21 @@ def convert_separable_convolution(insym, keras_layer, symtab):
         params1['bias'] = symtab.new_const(weightList[2])
     pointwise_conv = _sym.conv2d(data=depthwise_conv, **params1)
     # defuse activation
-    act_name = keras_layer.activation.func_name if six.PY2 else keras_layer.activation.__name__
+    if sys.version_info.major < 3:
+        act_name = keras_layer.activation.func_name
+    else:
+        act_name = keras_layer.activation.__name__
     if act_name != 'linear':
-        act_layer = _keras.layers.core.Activation(act_name)
-        pointwise_conv = convert_activation(pointwise_conv, act_layer, symtab)
+        pointwise_conv = convert_activation(act_name, act_name, symtab)
     return pointwise_conv
 
 
 def convert_pooling(insym, keras_layer, symtab):
     _check_data_format(keras_layer)
-    if isinstance(keras_layer, _keras.layers.pooling.GlobalMaxPooling2D):
+    pool_type = type(keras_layer).__name__
+    if pool_type == 'GlobalMaxPooling2D':
         return _sym.global_max_pool2d(insym)
-    elif isinstance(keras_layer, _keras.layers.pooling.GlobalAveragePooling2D):
+    elif pool_type == 'GlobalAveragePooling2D':
         return _sym.global_avg_pool2d(insym)
     else:
         params = {'pool_size':keras_layer.pool_size,
@@ -203,9 +216,9 @@ def convert_pooling(insym, keras_layer, symtab):
             params['padding'] = [pad_t, pad_l]
         else:
             raise TypeError("Unsupported padding type : {}".format(keras_layer.padding))
-        if isinstance(keras_layer, _keras.layers.convolutional.MaxPooling2D):
+        if pool_type == 'MaxPooling2D':
             return _sym.max_pool2d(insym, **params)
-        elif isinstance(keras_layer, _keras.layers.convolutional.AveragePooling2D):
+        elif pool_type == 'AveragePooling2D':
             return _sym.avg_pool2d(insym, **params)
         else:
             raise TypeError("Unsupported pooling type : {}".format(keras_layer))
@@ -244,66 +257,65 @@ def default_skip(insym, keras_layer, symtab):
 
 
 _convert_map  = {
-    _keras.layers.core.Dense                           : convert_dense,
-    _keras.layers.core.Activation                      : convert_activation,
-    _keras.layers.advanced_activations.LeakyReLU       : convert_activation,
-    _keras.layers.advanced_activations.PReLU           : convert_activation,
-    _keras.layers.advanced_activations.ELU             : convert_activation,
-    _keras.layers.advanced_activations.ThresholdedReLU : convert_activation,
+    'Dense'                    : convert_dense,
+    'Activation'               : convert_activation,
+    'LeakyReLU'                : convert_advanced_activation,
+    'PReLU'                    : convert_advanced_activation,
+    'ELU'                      : convert_advanced_activation,
+    'ThresholdedReLU'          : convert_advanced_activation,
 
-    _keras.layers.pooling.AveragePooling2D             : convert_pooling,
-    _keras.layers.pooling.MaxPooling2D                 : convert_pooling,
-    _keras.layers.pooling.GlobalAveragePooling2D       : convert_pooling,
-    _keras.layers.pooling.GlobalMaxPooling2D           : convert_pooling,
-    _keras.layers.convolutional.Conv2D                 : convert_convolution,
-    _keras.layers.convolutional.Conv2DTranspose        : convert_convolution,
-    _keras.applications.mobilenet.DepthwiseConv2D      : convert_convolution,
-    _keras.layers.convolutional.SeparableConv2D        : convert_separable_convolution,
+    'AveragePooling2D'         : convert_pooling,
+    'MaxPooling2D'             : convert_pooling,
+    'GlobalAveragePooling2D'   : convert_pooling,
+    'GlobalMaxPooling2D'       : convert_pooling,
+    'Conv2D'                   : convert_convolution,
+    'Conv2DTranspose'          : convert_convolution,
+    'DepthwiseConv2D'          : convert_convolution,
+    'SeparableConv2D'          : convert_separable_convolution,
 
-    _keras.layers.Concatenate                          : convert_concat,
-    _keras.layers.core.Flatten                         : convert_flatten,
-    _keras.layers.core.Reshape                         : convert_reshape,
-    _keras.layers.normalization.BatchNormalization     : convert_batchnorm,
+    'Flatten'                  : convert_flatten,
+    'Reshape'                  : convert_reshape,
+    'Concatenate'              : convert_concat,
+    'BatchNormalization'       : convert_batchnorm,
 
-    # _keras.layers.convolutional.ZeroPadding2D        : convert_padding,
-    # _keras.layers.convolutional.Cropping2D           : convert_cropping,
-    # _keras.layers.convolutional.UpSampling2D         : convert_upsample,
-    # _keras.layers.pooling.AveragePooling1D           : convert_pooling,
-    # _keras.layers.pooling.MaxPooling1D               : convert_pooling,
-    # _keras.layers.pooling.GlobalAveragePooling1D     : convert_pooling,
-    # _keras.layers.pooling.GlobalMaxPooling1D         : convert_pooling,
-    # _keras.layers.convolutional.ZeroPadding1D        : convert_padding,
-    # _keras.layers.convolutional.Cropping1D           : convert_cropping,
-    # _keras.layers.convolutional.UpSampling1D         : convert_upsample,
-    # _keras.layers.convolutional.Conv1D               : convert_convolution1d,
+    # 'ZeroPadding2D'          : convert_padding,
+    # 'Cropping2D'             : convert_cropping,
+    # 'UpSampling2D'           : convert_upsample,
+    # 'AveragePooling1D'       : convert_pooling,
+    # 'MaxPooling1D'           : convert_pooling,
+    # 'GlobalAveragePooling1D' : convert_pooling,
+    # 'GlobalMaxPooling1D'     : convert_pooling,
+    # 'ZeroPadding1D'          : convert_padding,
+    # 'Cropping1D'             : convert_cropping,
+    # 'UpSampling1D'           : convert_upsample,
+    # 'Conv1D'                 : convert_convolution1d,
 
-    # _keras.layers.recurrent.GRU                      : convert_gru,
-    # _keras.layers.recurrent.LSTM                     : convert_lstm,
-    # _keras.layers.recurrent.SimpleRNN                : convert_simple_rnn,
-    # _keras.layers.wrappers.Bidirectional             : convert_bidirectional,
-    # _keras.layers.wrappers.TimeDistributed           : default_skip,
+    # 'GRU'                    : convert_gru,
+    # 'LSTM'                   : convert_lstm,
+    # 'SimpleRNN'              : convert_simple_rnn,
+    # 'Bidirectional'          : convert_bidirectional,
+    # 'TimeDistributed'        : default_skip,
 
-    # _keras.layers.Add                                : convert_merge,
-    # _keras.layers.Multiply                           : convert_merge,
-    # _keras.layers.Average                            : convert_merge,
-    # _keras.layers.Maximum                            : convert_merge,
-    # _keras.layers.Dot                                : convert_merge,
-    # _keras.layers.core.Permute                       : convert_permute,
-    # _keras.layers.embeddings.Embedding               : convert_embedding,
-    # _keras.layers.core.RepeatVector                  : convert_repeat_vector,
+    # 'Add'                    : convert_merge,
+    # 'Multiply'               : convert_merge,
+    # 'Average'                : convert_merge,
+    # 'Maximum'                : convert_merge,
+    # 'Dot'                    : convert_merge,
+    # 'Permute'                : convert_permute,
+    # 'Embedding'              : convert_embedding,
+    # 'RepeatVector'           : convert_repeat_vector,
 
-    _keras.engine.topology.InputLayer                  : default_skip,
-    _keras.layers.core.Dropout                         : default_skip,
-    _keras.layers.core.SpatialDropout2D                : default_skip,
-    _keras.layers.core.SpatialDropout1D                : default_skip,
+    'InputLayer'               : default_skip,
+    'Dropout'                  : default_skip,
+    'SpatialDropout2D'         : default_skip,
+    'SpatialDropout1D'         : default_skip,
 }
 
 
 def _check_unsupported_layers(model):
     for layer in model.layers:
-        if type(layer) not in _convert_map:
-            raise ValueError(
-                "Keras layer '%s' not supported. " % str(type(layer)))
+        if type(layer).__name__ not in _convert_map:
+            raise ValueError("Keras layer {} not supported.".format(type(layer).__name__))
 
 
 def keras_op_to_nnvm(insym, keras_layer, outname, symtab):
@@ -311,8 +323,8 @@ def keras_op_to_nnvm(insym, keras_layer, outname, symtab):
 
     Parameters
     ----------
-    insym : nnvm.symbol.Symbol
-        The input nnvm symbol
+    insym : nnvm.symbol.Symbol or a list of it
+        The input nnvm symbol(s)
 
     keras_layer : keras.layers
         The keras layer to be converted
@@ -323,9 +335,9 @@ def keras_op_to_nnvm(insym, keras_layer, outname, symtab):
     symtab : nnvm.frontend.common.SymbolTable
         The global symbol table to be updated
     """
-    if type(keras_layer) not in _convert_map:
-        raise NotImplementedError("%s is not supported" % (type(keras_layer).__name__))
-    ret = _convert_map[type(keras_layer)](insym, keras_layer, symtab)
+    if type(keras_layer).__name__ not in _convert_map:
+        raise NotImplementedError("{} is not supported".format((type(keras_layer).__name__)))
+    ret = _convert_map[type(keras_layer).__name__](insym, keras_layer, symtab)
     symtab.set_var(outname, ret)
 
 
@@ -345,13 +357,18 @@ def from_keras(model):
     params : dict of str to tvm.NDArray
         The parameter dict to be used by nnvm
     """
-    if _keras.backend.image_data_format() != 'channels_last':
+    try:
+        import keras
+    except ImportError:
+        raise ImportError('Keras must be installed')
+    assert isinstance(model, keras.engine.training.Model)
+    if keras.backend.image_data_format() != 'channels_last':
         raise ValueError("Keras frontend currently supports data_format = channels_last only.")
     _check_unsupported_layers(model)
 
     symtab = SymbolTable()
     for keras_layer in model.layers:
-        if isinstance(keras_layer, _keras.engine.topology.InputLayer):
+        if isinstance(keras_layer, keras.engine.topology.InputLayer):
             keras_layer.name = 'data'
             symtab.get_var(keras_layer.name, must_contain=False)
         else:
