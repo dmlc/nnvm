@@ -1,9 +1,9 @@
 # pylint: disable=invalid-name, import-self
 """Keras frontend."""
 from __future__ import absolute_import as _abs
+import sys
 import numpy as np
 import tvm
-import sys
 from .. import symbol as _sym
 from .common import SymbolTable
 
@@ -16,7 +16,7 @@ def _check_data_format(keras_layer):
             raise ValueError("Keras frontend currently supports data_format = channels_last only.")
 
 
-def convert_activation(insym, keras_layer, symtab):
+def _convert_activation(insym, keras_layer, _):
     if isinstance(keras_layer, (str, unicode)):
         act_type = keras_layer
     else:
@@ -27,9 +27,8 @@ def convert_activation(insym, keras_layer, symtab):
     if act_type == 'linear':
         if isinstance(keras_layer, (str, unicode)):
             return insym
-        else:
-            return _sym.__add_scalar__(_sym.__mul_scalar__(insym,
-                scalar=keras_layer.alpha), scalar=keras_layer.beta)
+        return _sym.__add_scalar__(_sym.__mul_scalar__(insym, \
+            scalar=keras_layer.alpha), scalar=keras_layer.beta)
     elif act_type == 'softmax':
         return _sym.softmax(insym)
     elif act_type == 'sigmoid':
@@ -52,7 +51,7 @@ def convert_activation(insym, keras_layer, symtab):
         raise TypeError("Unsupported activation type : {}".format(act_type))
 
 
-def convert_advanced_activation(insym, keras_layer, symtab):
+def _convert_advanced_activation(insym, keras_layer, _):
     act_type = type(keras_layer).__name__
     if act_type == 'LeakyReLU':
         return _sym.leaky_relu(insym, alpha=keras_layer.alpha)
@@ -66,7 +65,7 @@ def convert_advanced_activation(insym, keras_layer, symtab):
         raise TypeError("Unsupported advanced activation type : {}".format(act_type))
 
 
-def convert_merge(insym, keras_layer, symtab):
+def _convert_merge(insym, keras_layer, _):
     merge_type = type(keras_layer).__name__
     if merge_type == 'Add':
         return _sym.elemwise_add(insym[0], insym[1])
@@ -82,9 +81,9 @@ def convert_merge(insym, keras_layer, symtab):
         raise TypeError("Unsupported merge type : {}".format(merge_type))
 
 
-def convert_dense(insym, keras_layer, symtab):
+def _convert_dense(insym, keras_layer, symtab):
     weightList = keras_layer.get_weights()
-    weight = symtab.new_const(weightList[0].transpose([1,0]))
+    weight = symtab.new_const(weightList[0].transpose([1, 0]))
     params = {'weight':weight, 'use_bias':False, 'units':weightList[0].shape[1]}
     if keras_layer.use_bias:
         params['use_bias'] = True
@@ -96,43 +95,45 @@ def convert_dense(insym, keras_layer, symtab):
     else:
         act_type = keras_layer.activation.__name__
     if act_type != 'linear':
-        out = convert_activation(out, act_type, symtab)
+        out = _convert_activation(out, act_type, symtab)
     return out
 
 
-def convert_convolution(insym, keras_layer, symtab):
+def _convert_convolution(insym, keras_layer, symtab):
     # TODO: same padding fails when strides > 1, due to asymmetry padding
     _check_data_format(keras_layer)
     is_deconv = type(keras_layer).__name__ == 'Conv2DTranspose'
+    is_depthconv = type(keras_layer).__name__ == 'DepthwiseConv2D'
     weightList = keras_layer.get_weights()
     if is_deconv:
         kernel_h, kernel_w, n_filters, in_channels = weightList[0].shape
-        weight = weightList[0].transpose([3,2,0,1])
+        weight = weightList[0].transpose([3, 2, 0, 1])
+    elif is_depthconv:
+        kernel_h, kernel_w, in_channels, depth_mult = weightList[0].shape
+        weight = weightList[0].transpose([2, 3, 0, 1])
     else:
         kernel_h, kernel_w, in_channels, n_filters = weightList[0].shape
-        weight = weightList[0].transpose([3,2,0,1])
-    dilation = [1,1]
-    if (type(keras_layer.dilation_rate) is list) or (type(keras_layer.dilation_rate) is tuple):
+        weight = weightList[0].transpose([3, 2, 0, 1])
+    dilation = [1, 1]
+    if isinstance(keras_layer.dilation_rate, (list, tuple)):
         dilation = [keras_layer.dilation_rate[0], keras_layer.dilation_rate[1]]
     else:
         dilation = [keras_layer.dilation_rate, keras_layer.dilation_rate]
-    groups = 1
-    if type(keras_layer).__name__ == 'DepthwiseConv2D':
-        groups = in_channels
-        depth_mult = keras_layer.depth_multiplier
-        weight = np.reshape(weight, (in_channels, depth_mult, kernel_h, kernel_w))
     stride_h, stride_w = keras_layer.strides
     params = {'weight': symtab.new_const(weight),
-              'channels': n_filters,
               'kernel_size': [kernel_h, kernel_w],
               'strides': [stride_h, stride_w],
-              'dilation': dilation,
-              'groups': groups}
+              'dilation': dilation}
+    if is_depthconv:
+        params['channels'] = in_channels * depth_mult
+        params['groups'] = in_channels
+    else:
+        params['channels'] = n_filters
     if keras_layer.use_bias:
         params['use_bias'] = True
         params['bias'] = symtab.new_const(weightList[1])
     if keras_layer.padding == 'valid':
-        params['padding'] = [0,0]
+        params['padding'] = [0, 0]
     elif keras_layer.padding == 'same':
         pad_h = kernel_h - 1
         pad_w = kernel_w - 1
@@ -154,23 +155,24 @@ def convert_convolution(insym, keras_layer, symtab):
     else:
         act_type = keras_layer.activation.__name__
     if act_type != 'linear':
-        out = convert_activation(out, act_type, symtab)
+        out = _convert_activation(out, act_type, symtab)
     return out
 
 
-def convert_separable_convolution(insym, keras_layer, symtab):
+def _convert_separable_convolution(insym, keras_layer, symtab):
     _check_data_format(keras_layer)
     weightList = keras_layer.get_weights()
+    # depthwise conv
     kernel_h, kernel_w, in_channels, depth_mult = weightList[0].shape
-    weight0 = weightList[0].transpose([2,3,0,1])
+    weight0 = weightList[0].transpose([2, 3, 0, 1])
     params0 = {'weight': symtab.new_const(weight0),
                'channels': in_channels * depth_mult,
                'groups': in_channels,
                'kernel_size': [kernel_h, kernel_w],
                'strides': keras_layer.strides,
-               'dilation': [1,1]}
+               'dilation': [1, 1]}
     if keras_layer.padding == 'valid':
-        params0['padding'] = [0,0]
+        params0['padding'] = [0, 0]
     elif keras_layer.padding == 'same':
         pad_h = kernel_h - 1
         pad_w = kernel_w - 1
@@ -183,14 +185,14 @@ def convert_separable_convolution(insym, keras_layer, symtab):
     else:
         raise TypeError("Unsupported padding type : {}".format(keras_layer.padding))
     depthconv = _sym.conv2d(data=insym, **params0)
-
-    weight1 = weightList[1].transpose([3,2,0,1])
+    # pointwise conv
+    weight1 = weightList[1].transpose([3, 2, 0, 1])
     params1 = {'weight': symtab.new_const(weight1),
                'channels': weight1.shape[0],
                'groups': 1,
-               'kernel_size': [1,1],
-               'strides': [1,1],
-               'dilation': [1,1]}
+               'kernel_size': [1, 1],
+               'strides': [1, 1],
+               'dilation': [1, 1]}
     if keras_layer.use_bias:
         params1['use_bias'] = True
         params1['bias'] = symtab.new_const(weightList[2])
@@ -201,31 +203,31 @@ def convert_separable_convolution(insym, keras_layer, symtab):
     else:
         act_type = keras_layer.activation.__name__
     if act_type != 'linear':
-        out = convert_activation(out, act_type, symtab)
+        out = _convert_activation(out, act_type, symtab)
     return out
 
 
-def convert_flatten(insym, keras_layer, symtab):
+def _convert_flatten(insym, keras_layer, _):
     _check_data_format(keras_layer)
     # NCHW -> NHWC so that dense can be correctly converted
-    insym = _sym.transpose(insym, axes=[0,2,3,1])
+    insym = _sym.transpose(insym, axes=[0, 2, 3, 1])
     return _sym.flatten(insym)
 
 
-def convert_pooling(insym, keras_layer, symtab):
+def _convert_pooling(insym, keras_layer, symtab):
     _check_data_format(keras_layer)
     pool_type = type(keras_layer).__name__
     # global pool in keras = global pool + flatten in nnvm
     if pool_type == 'GlobalMaxPooling2D':
-        return convert_flatten(_sym.global_max_pool2d(insym), keras_layer, symtab)
+        return _convert_flatten(_sym.global_max_pool2d(insym), keras_layer, symtab)
     elif pool_type == 'GlobalAveragePooling2D':
-        return convert_flatten(_sym.global_avg_pool2d(insym), keras_layer, symtab)
+        return _convert_flatten(_sym.global_avg_pool2d(insym), keras_layer, symtab)
     else:
         params = {'pool_size': keras_layer.pool_size,
                   'strides': keras_layer.strides,
-                  'padding': [1,1]}
+                  'padding': [1, 1]}
         if keras_layer.padding == 'valid':
-            params['padding'] = [0,0]
+            params['padding'] = [0, 0]
         elif keras_layer.padding == 'same':
             pool_size = params['pool_size']
             pad_h = pool_size[0] - 1
@@ -246,10 +248,10 @@ def convert_pooling(insym, keras_layer, symtab):
             raise TypeError("Unsupported pooling type : {}".format(keras_layer))
 
 
-def convert_batchnorm(insym, keras_layer, symtab):
-    params={'scale': False,
-            'center': False,
-            'epsilon': keras_layer.epsilon}
+def _convert_batchnorm(insym, keras_layer, symtab):
+    params = {'scale': False,
+              'center': False,
+              'epsilon': keras_layer.epsilon}
     idx = 0
     if keras_layer.scale:
         params['scale'] = True
@@ -262,79 +264,78 @@ def convert_batchnorm(insym, keras_layer, symtab):
         params['beta'] = symtab.new_const(beta)
         idx += 1
     moving_mean = keras_layer.get_weights()[idx]
-    moving_var = keras_layer.get_weights()[idx+1]
+    moving_var = keras_layer.get_weights()[idx + 1]
     params['moving_mean'] = symtab.new_const(moving_mean)
     params['moving_var'] = symtab.new_const(moving_var)
     return _sym.batch_norm(data=insym, **params)
 
 
-def convert_concat(insym, keras_layer, symtab):
+def _convert_concat(insym, keras_layer, _):
     _check_data_format(keras_layer)
-    assert(keras_layer.axis == -1 or keras_layer.axis == 3)
     if not isinstance(insym, list):
         insym = [insym]
     return _sym.concatenate(*insym, axis=1)
 
 
-def convert_reshape(insym, keras_layer, symtab):
+def _convert_reshape(insym, keras_layer, _):
     return _sym.reshape(insym, keras_layer.shape)
 
 
-def default_skip(insym, keras_layer, symtab):
+def default_skip(insym, keras_layer, _): # pylint: disable=unused-argument
     """Layers that can be skipped because they are train time only."""
     return
 
 
-_convert_map  = {
-    'Dense'                    : convert_dense,
-    'Activation'               : convert_activation,
-    'LeakyReLU'                : convert_advanced_activation,
-    'PReLU'                    : convert_advanced_activation,
-    'ELU'                      : convert_advanced_activation,
-    'ThresholdedReLU'          : convert_advanced_activation,
+_convert_map = {
+    'Dense'                    : _convert_dense,
+    'Activation'               : _convert_activation,
+    'LeakyReLU'                : _convert_advanced_activation,
+    'PReLU'                    : _convert_advanced_activation,
+    'ELU'                      : _convert_advanced_activation,
+    'ThresholdedReLU'          : _convert_advanced_activation,
 
-    'AveragePooling2D'         : convert_pooling,
-    'MaxPooling2D'             : convert_pooling,
-    'GlobalAveragePooling2D'   : convert_pooling,
-    'GlobalMaxPooling2D'       : convert_pooling,
-    'Conv2D'                   : convert_convolution,
-    'Conv2DTranspose'          : convert_convolution,
-    'DepthwiseConv2D'          : convert_convolution,
-    'SeparableConv2D'          : convert_separable_convolution,
+    'AveragePooling2D'         : _convert_pooling,
+    'MaxPooling2D'             : _convert_pooling,
+    'GlobalAveragePooling2D'   : _convert_pooling,
+    'GlobalMaxPooling2D'       : _convert_pooling,
+    'Conv2D'                   : _convert_convolution,
+    'Conv2DTranspose'          : _convert_convolution,
+    'DepthwiseConv2D'          : _convert_convolution,
+    'SeparableConv2D'          : _convert_separable_convolution,
 
-    'Flatten'                  : convert_flatten,
-    'Reshape'                  : convert_reshape,
-    'Concatenate'              : convert_concat,
-    'BatchNormalization'       : convert_batchnorm,
+    'Flatten'                  : _convert_flatten,
+    'Reshape'                  : _convert_reshape,
+    'Concatenate'              : _convert_concat,
+    'BatchNormalization'       : _convert_batchnorm,
 
-    'Add'                      : convert_merge,
-    'Subtract'                 : convert_merge,
-    'Multiply'                 : convert_merge,
+    'Add'                      : _convert_merge,
+    'Subtract'                 : _convert_merge,
+    'Multiply'                 : _convert_merge,
 
-    # 'ZeroPadding1D'          : convert_padding,
-    # 'ZeroPadding2D'          : convert_padding,
-    # 'AveragePooling1D'       : convert_pooling,
-    # 'MaxPooling1D'           : convert_pooling,
-    # 'GlobalAveragePooling1D' : convert_pooling,
-    # 'GlobalMaxPooling1D'     : convert_pooling,
-    # 'Cropping1D'             : convert_cropping,
-    # 'Cropping2D'             : convert_cropping,
-    # 'UpSampling1D'           : convert_upsample,
-    # 'UpSampling2D'           : convert_upsample,
-    # 'Conv1D'                 : convert_convolution1d,
+    # 'ZeroPadding1D'          : _convert_padding,
+    # 'ZeroPadding2D'          : _convert_padding,
+    # 'AveragePooling1D'       : _convert_pooling,
+    # 'MaxPooling1D'           : _convert_pooling,
+    # 'GlobalAveragePooling1D' : _convert_pooling,
+    # 'GlobalMaxPooling1D'     : _convert_pooling,
+    # 'Cropping1D'             : _convert_cropping,
+    # 'Cropping2D'             : _convert_cropping,
+    # 'UpSampling1D'           : _convert_upsample,
+    # 'UpSampling2D'           : _convert_upsample,
+    # 'Conv1D'                 : _convert_convolution1d,
 
-    # 'GRU'                    : convert_gru,
-    # 'LSTM'                   : convert_lstm,
-    # 'SimpleRNN'              : convert_simple_rnn,
-    # 'Bidirectional'          : convert_bidirectional,
+    # 'GRU'                    : _convert_gru,
+    # 'LSTM'                   : _convert_lstm,
+    # 'SimpleRNN'              : _convert_simple_rnn,
+    # 'Bidirectional'          : _convert_bidirectional,
     # 'TimeDistributed'        : default_skip,
 
-    # 'Average'                : convert_merge,
-    # 'Maximum'                : convert_merge,
-    # 'Dot'                    : convert_merge,
-    # 'Permute'                : convert_permute,
-    # 'Embedding'              : convert_embedding,
-    # 'RepeatVector'           : convert_repeat_vector,
+    # 'Average'                : _convert_merge,
+    # 'Maximum'                : _convert_merge,
+    # 'Dot'                    : _convert_merge,
+    # 'Permute'                : _convert_permute,
+    # 'Embedding'              : _convert_embedding,
+    # 'RepeatVector'           : _convert_repeat_vector,
 
     'InputLayer'               : default_skip,
     'Dropout'                  : default_skip,
