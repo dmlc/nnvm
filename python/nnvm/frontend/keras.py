@@ -18,56 +18,75 @@ def _check_data_format(keras_layer):
 
 def convert_activation(insym, keras_layer, symtab):
     if isinstance(keras_layer, (str, unicode)):
-        act_name = keras_layer
+        act_type = keras_layer
     else:
         if sys.version_info.major < 3:
-            act_name = keras_layer.activation.func_name
+            act_type = keras_layer.activation.func_name
         else:
-            act_name = keras_layer.activation.__name__
-    if act_name == 'linear':
+            act_type = keras_layer.activation.__name__
+    if act_type == 'linear':
         if isinstance(keras_layer, (str, unicode)):
             return insym
         else:
             return _sym.__add_scalar__(_sym.__mul_scalar__(insym,
                 scalar=keras_layer.alpha), scalar=keras_layer.beta)
-    elif act_name == 'softmax':
+    elif act_type == 'softmax':
         return _sym.softmax(insym)
-    elif act_name == 'sigmoid':
+    elif act_type == 'sigmoid':
         return _sym.sigmoid(insym)
-    elif act_name == 'tanh':
+    elif act_type == 'tanh':
         return _sym.tanh(insym)
-    elif act_name == 'relu':
+    elif act_type == 'relu':
         return _sym.relu(insym)
-    elif act_name == 'softplus':
+    elif act_type == 'softplus':
         return _sym.log(_sym.__add_scalar__(_sym.exp(insym), scalar=1))
-    elif act_name == 'elu':
+    elif act_type == 'elu':
         return _sym.__mul_scalar__(_sym.__add_scalar__(_sym.exp(insym), scalar=-1), scalar=1)
-    elif act_name == 'relu6':
+    elif act_type == 'relu6':
         raise NotImplementedError('relu6 not implemented')
-    elif act_name == 'softsign':
+    elif act_type == 'softsign':
         raise NotImplementedError('softsign not implemented')
-    elif act_name == 'hard_sigmoid':
+    elif act_type == 'hard_sigmoid':
         raise NotImplementedError('hard_sigmoid not implemented')
     else:
-        raise TypeError("Unsupported activation type : {}".format(act_name))
+        raise TypeError("Unsupported activation type : {}".format(act_type))
 
 
 def convert_advanced_activation(insym, keras_layer, symtab):
-    act_name = type(keras_layer).__name__
-    if act_name == 'LeakyReLU':
+    act_type = type(keras_layer).__name__
+    if act_type == 'LeakyReLU':
         return _sym.leaky_relu(insym, alpha=keras_layer.alpha)
-    elif act_name == 'ELU':
+    elif act_type == 'ELU':
         return _sym.__mul_scalar__(_sym.__add_scalar__(_sym.exp(insym), scalar=-1),
             scalar=keras_layer.alpha)
-    elif act_name == 'PReLU':
+    elif act_type == 'PReLU':
         raise NotImplementedError('PReLU not implemented')
-    elif act_name == 'ThresholdedReLU':
+    elif act_type == 'ThresholdedReLU':
         raise NotImplementedError('ThresholdedReLU not implemented')
     else:
-        raise TypeError("Unsupported advanced activation type : {}".format(act_name))
+        raise TypeError("Unsupported advanced activation type : {}".format(act_type))
+
+
+def convert_merge(insym, keras_layer, symtab):
+    merge_type = type(keras_layer).__name__
+    if merge_type == 'Add':
+        return _sym.elemwise_add(insym[0], insym[1])
+    elif merge_type == 'Subtract':
+        return _sym.elemwise_sub(insym[0], insym[1])
+    elif merge_type == 'Multiply':
+        return _sym.elemwise_mul(insym[0], insym[1])
+    else:
+        raise TypeError("Unsupported merge type : {}".format(merge_type))
 
 
 def convert_dense(insym, keras_layer, symtab):
+    # insert flatten before dense when necessary
+    if 'pool' in insym.list_output_names()[0]:
+        insym = convert_flatten(insym, keras_layer, symtab)
+    # print dir(insym)
+    # print insym.list_attr()
+    # print insym.get_internals()
+    # print insym.list_input_names()
     weightList = keras_layer.get_weights()
     weight = symtab.new_const(weightList[0].transpose([1,0]))
     params = {'weight':weight, 'use_bias':False, 'units':weightList[0].shape[1]}
@@ -77,11 +96,11 @@ def convert_dense(insym, keras_layer, symtab):
     dense = _sym.dense(data=insym, **params)
     # defuse activation
     if sys.version_info.major < 3:
-        act_name = keras_layer.activation.func_name
+        act_type = keras_layer.activation.func_name
     else:
-        act_name = keras_layer.activation.__name__
-    if act_name != 'linear':
-        dense = convert_activation(dense, act_name, symtab)
+        act_type = keras_layer.activation.__name__
+    if act_type != 'linear':
+        dense = convert_activation(dense, act_type, symtab)
     return dense
 
 
@@ -91,10 +110,10 @@ def convert_convolution(insym, keras_layer, symtab):
     is_deconv = type(keras_layer).__name__ == 'Conv2DTranspose'
     weightList = keras_layer.get_weights()
     if is_deconv:
-        height, width, n_filters, in_channels = weightList[0].shape
+        kernel_h, kernel_w, n_filters, in_channels = weightList[0].shape
         weight = weightList[0].transpose([3,2,0,1])
     else:
-        height, width, in_channels, n_filters = weightList[0].shape
+        kernel_h, kernel_w, in_channels, n_filters = weightList[0].shape
         weight = weightList[0].transpose([3,2,0,1])
     dilation = [1,1]
     if (type(keras_layer.dilation_rate) is list) or (type(keras_layer.dilation_rate) is tuple):
@@ -105,10 +124,10 @@ def convert_convolution(insym, keras_layer, symtab):
     if type(keras_layer).__name__ == 'DepthwiseConv2D':
         groups = in_channels
         depth_multiplier = keras_layer.depth_multiplier
-        weight = np.reshape(weight, (in_channels, depth_multiplier, height, width))
+        weight = np.reshape(weight, (in_channels, depth_multiplier, kernel_h, kernel_w))
     params = {'weight': symtab.new_const(weight),
               'channels': n_filters,
-              'kernel_size': [height, width],
+              'kernel_size': [kernel_h, kernel_w],
               'strides': list(keras_layer.strides),
               'dilation': dilation,
               'groups': groups}
@@ -118,9 +137,8 @@ def convert_convolution(insym, keras_layer, symtab):
     if keras_layer.padding == 'valid':
         params['padding'] = (0,0)
     elif keras_layer.padding == 'same':
-        kernel = params['kernel_size']
-        pad_h = kernel[0] - 1
-        pad_w = kernel[1] - 1
+        pad_h = kernel_h - 1
+        pad_w = kernel_w - 1
         pad_t = pad_h // 2
         pad_l = pad_w // 2
         pad_b = pad_h - pad_t
@@ -135,31 +153,30 @@ def convert_convolution(insym, keras_layer, symtab):
         out = _sym.conv2d(data=insym, **params)
     # defuse activation
     if sys.version_info.major < 3:
-        act_name = keras_layer.activation.func_name
+        act_type = keras_layer.activation.func_name
     else:
-        act_name = keras_layer.activation.__name__
-    if act_name != 'linear':
-        out = convert_activation(out, act_name, symtab)
+        act_type = keras_layer.activation.__name__
+    if act_type != 'linear':
+        out = convert_activation(out, act_type, symtab)
     return out
 
 
 def convert_separable_convolution(insym, keras_layer, symtab):
     _check_data_format(keras_layer)
     weightList = keras_layer.get_weights()
-    height, width, in_channels, depth_mult = weightList[0].shape
+    kernel_h, kernel_w, in_channels, depth_mult = weightList[0].shape
     weight0 = weightList[0].transpose([2,3,0,1])
     params0 = {'weight': symtab.new_const(weight0),
                'channels': in_channels * depth_mult,
                'groups': in_channels,
-               'kernel_size': [height, width],
+               'kernel_size': [kernel_h, kernel_w],
                'strides': list(keras_layer.strides),
                'dilation': [1,1]}
     if keras_layer.padding == 'valid':
         params0['padding'] = (0,0)
     elif keras_layer.padding == 'same':
-        kernel = params['kernel_size']
-        pad_h = kernel[0] - 1
-        pad_w = kernel[1] - 1
+        pad_h = kernel_h - 1
+        pad_w = kernel_w - 1
         pad_t = pad_h // 2
         pad_l = pad_w // 2
         pad_b = pad_h - pad_t
@@ -183,11 +200,11 @@ def convert_separable_convolution(insym, keras_layer, symtab):
     pointwise_conv = _sym.conv2d(data=depthwise_conv, **params1)
     # defuse activation
     if sys.version_info.major < 3:
-        act_name = keras_layer.activation.func_name
+        act_type = keras_layer.activation.func_name
     else:
-        act_name = keras_layer.activation.__name__
-    if act_name != 'linear':
-        pointwise_conv = convert_activation(act_name, act_name, symtab)
+        act_type = keras_layer.activation.__name__
+    if act_type != 'linear':
+        pointwise_conv = convert_activation(act_type, act_type, symtab)
     return pointwise_conv
 
 
@@ -205,9 +222,9 @@ def convert_pooling(insym, keras_layer, symtab):
         if keras_layer.padding == 'valid':
             params['padding'] = (0,0)
         elif keras_layer.padding == 'same':
-            kernel = params['kernel_size']
-            pad_h = kernel[0] - 1
-            pad_w = kernel[1] - 1
+            pool_size = params['pool_size']
+            pad_h = pool_size[0] - 1
+            pad_w = pool_size[1] - 1
             pad_t = pad_h // 2
             pad_l = pad_w // 2
             pad_b = pad_h - pad_t
@@ -278,16 +295,20 @@ _convert_map  = {
     'Concatenate'              : convert_concat,
     'BatchNormalization'       : convert_batchnorm,
 
+    'Add'                      : convert_merge,
+    'Subtract'                 : convert_merge,
+    'Multiply'                 : convert_merge,
+
+    # 'ZeroPadding1D'          : convert_padding,
     # 'ZeroPadding2D'          : convert_padding,
-    # 'Cropping2D'             : convert_cropping,
-    # 'UpSampling2D'           : convert_upsample,
     # 'AveragePooling1D'       : convert_pooling,
     # 'MaxPooling1D'           : convert_pooling,
     # 'GlobalAveragePooling1D' : convert_pooling,
     # 'GlobalMaxPooling1D'     : convert_pooling,
-    # 'ZeroPadding1D'          : convert_padding,
     # 'Cropping1D'             : convert_cropping,
+    # 'Cropping2D'             : convert_cropping,
     # 'UpSampling1D'           : convert_upsample,
+    # 'UpSampling2D'           : convert_upsample,
     # 'Conv1D'                 : convert_convolution1d,
 
     # 'GRU'                    : convert_gru,
@@ -296,8 +317,6 @@ _convert_map  = {
     # 'Bidirectional'          : convert_bidirectional,
     # 'TimeDistributed'        : default_skip,
 
-    # 'Add'                    : convert_merge,
-    # 'Multiply'               : convert_merge,
     # 'Average'                : convert_merge,
     # 'Maximum'                : convert_merge,
     # 'Dot'                    : convert_merge,
@@ -366,6 +385,9 @@ def from_keras(model):
         raise ValueError("Keras frontend currently supports data_format = channels_last only.")
     _check_unsupported_layers(model)
 
+    # for i in model.layers:
+    #     print i.name
+
     symtab = SymbolTable()
     for keras_layer in model.layers:
         if isinstance(keras_layer, keras.engine.topology.InputLayer):
@@ -376,7 +398,11 @@ def from_keras(model):
             for node in keras_layer.inbound_nodes:
                 for pred in node.inbound_layers:
                     predecessors.append(pred.name)
-            insym = symtab.get_var(predecessors[0], must_contain=True)
+            if len(predecessors) == 1:
+                insym = symtab.get_var(predecessors[0], must_contain=True)
+            else:
+                insym = [symtab.get_var(pred, must_contain=True) for pred in predecessors]
+            print predecessors
             keras_op_to_nnvm(insym, keras_layer, keras_layer.name, symtab)
 
     returns = [symtab.get_var(i.name, must_contain=False) for i in model.output_layers]
