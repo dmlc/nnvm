@@ -287,6 +287,32 @@ def _convert_batchnorm(insym, keras_layer, symtab):
     return _sym.batch_norm(data=insym, **params)
 
 
+def _convert_padding(insym, keras_layer, _):
+    _check_data_format(keras_layer)
+    padding_type = type(keras_layer).__name__
+    padding = keras_layer.padding
+    top = left = bottom = right = 0
+    if padding_type == 'ZeroPadding2D':
+        if isinstance(padding, int):
+            top = left = bottom = right = padding
+        elif isinstance(padding, tuple):
+            if isinstance(padding[0], int):
+                top, left = padding
+                bottom, right = padding
+            elif isinstance(padding[0], tuple):
+                top, bottom = padding[0]
+                left, right = padding[1]
+            else:
+                raise ValueError("Unrecognized padding option: {}".format(str(padding)))
+        else:
+            raise ValueError("Unrecognized padding option: {}".format(str(padding)))
+    elif padding_type == 'ZeroPadding1D':
+        raise NotImplementedError("ZeroPadding1D not implemented")
+    else:
+        raise ValueError("Unrecognized padding type: {}".format(padding_type))
+    return _sym.pad(data=insym, pad_width=((0, 0), (0, 0), (top, bottom), (left, right)))
+
+
 def _convert_concat(insym, keras_layer, _):
     _check_data_format(keras_layer)
     if not isinstance(insym, list):
@@ -298,7 +324,7 @@ def _convert_reshape(insym, keras_layer, _):
     return _sym.reshape(insym, keras_layer.shape)
 
 
-def default_skip(insym, keras_layer, _): # pylint: disable=unused-argument
+def _default_skip(insym, keras_layer, _): # pylint: disable=unused-argument
     """Layers that can be skipped because they are train time only."""
     return
 
@@ -328,9 +354,9 @@ _convert_map = {
     'Add'                      : _convert_merge,
     'Subtract'                 : _convert_merge,
     'Multiply'                 : _convert_merge,
+    'ZeroPadding2D'            : _convert_padding,
 
     # 'ZeroPadding1D'          : _convert_padding,
-    # 'ZeroPadding2D'          : _convert_padding,
     # 'AveragePooling1D'       : _convert_pooling,
     # 'MaxPooling1D'           : _convert_pooling,
     # 'GlobalAveragePooling1D' : _convert_pooling,
@@ -345,7 +371,7 @@ _convert_map = {
     # 'LSTM'                   : _convert_lstm,
     # 'SimpleRNN'              : _convert_simple_rnn,
     # 'Bidirectional'          : _convert_bidirectional,
-    # 'TimeDistributed'        : default_skip,
+    # 'TimeDistributed'        : _default_skip,
 
     # 'Average'                : _convert_merge,
     # 'Maximum'                : _convert_merge,
@@ -354,10 +380,10 @@ _convert_map = {
     # 'Embedding'              : _convert_embedding,
     # 'RepeatVector'           : _convert_repeat_vector,
 
-    'InputLayer'               : default_skip,
-    'Dropout'                  : default_skip,
-    'SpatialDropout2D'         : default_skip,
-    'SpatialDropout1D'         : default_skip,
+    'InputLayer'               : _default_skip,
+    'Dropout'                  : _default_skip,
+    'SpatialDropout2D'         : _default_skip,
+    'SpatialDropout1D'         : _default_skip,
 }
 
 

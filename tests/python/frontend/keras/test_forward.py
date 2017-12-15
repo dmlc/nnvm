@@ -36,7 +36,7 @@ def verify_keras_frontend(keras_model):
     keras_out = get_keras_output(x)
     for target, ctx in ctx_list():
         tvm_out = get_tvm_output(x.transpose([0,3,1,2]), target, ctx)
-        np.testing.assert_allclose(keras_out, tvm_out, rtol=1e-5, atol=1e-4)
+        np.testing.assert_allclose(keras_out, tvm_out, rtol=1e-5, atol=1e-5)
 
 
 def verify_forward_softrelu():
@@ -114,4 +114,4 @@ if __name__ == '__main__':
 
     verify_forward_vgg16()
     # verify_forward_xception()
-    # verify_forward_resnet50()
+    verify_forward_resnet50()
