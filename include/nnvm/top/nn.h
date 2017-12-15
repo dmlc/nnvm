@@ -257,6 +257,14 @@ struct GlobalPool2DParam : public dmlc::Parameter<GlobalPool2DParam> {
   }
 };
 
+struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
+  int scale;
+  DMLC_DECLARE_PARAMETER(UpSamplingParam) {
+    DMLC_DECLARE_FIELD(scale)
+      .describe("upsampling scaling factor");
+  }
+};
+
 }  // namespace top
 }  // namespace nnvm
 
