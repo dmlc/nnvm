@@ -100,7 +100,6 @@ def _convert_dense(insym, keras_layer, symtab):
 
 
 def _convert_convolution(insym, keras_layer, symtab):
-    # TODO: same padding fails when strides > 1, due to asymmetry padding
     _check_data_format(keras_layer)
     is_deconv = type(keras_layer).__name__ == 'Conv2DTranspose'
     is_depthconv = type(keras_layer).__name__ == 'DepthwiseConv2D'
@@ -123,7 +122,8 @@ def _convert_convolution(insym, keras_layer, symtab):
     params = {'weight': symtab.new_const(weight),
               'kernel_size': [kernel_h, kernel_w],
               'strides': [stride_h, stride_w],
-              'dilation': dilation}
+              'dilation': dilation,
+              'padding': [0, 0]}
     if is_depthconv:
         params['channels'] = in_channels * depth_mult
         params['groups'] = in_channels
@@ -133,16 +133,20 @@ def _convert_convolution(insym, keras_layer, symtab):
         params['use_bias'] = True
         params['bias'] = symtab.new_const(weightList[1])
     if keras_layer.padding == 'valid':
-        params['padding'] = [0, 0]
+        pass
+    # we insert a separate pad operator
     elif keras_layer.padding == 'same':
-        pad_h = kernel_h - 1
-        pad_w = kernel_w - 1
+        in_h = keras_layer.input.shape[1].value
+        in_w = keras_layer.input.shape[2].value
+        out_h = (in_h + stride_h - 1) // stride_h
+        out_w = (in_w + stride_w - 1) // stride_w
+        pad_h = np.maximum((out_h - 1) * stride_h + kernel_h - in_h, 0)
+        pad_w = np.maximum((out_w - 1) * stride_w + kernel_w - in_w, 0)
         pad_t = pad_h // 2
         pad_l = pad_w // 2
         pad_b = pad_h - pad_t
         pad_r = pad_w - pad_l
-        assert pad_t == pad_r and pad_l == pad_b, "Asymmetry padding not supported"
-        params['padding'] = [pad_t, pad_l]
+        insym = _sym.pad(data=insym, pad_width=((0, 0), (0, 0), (pad_t, pad_b), (pad_l, pad_r)))
     else:
         raise TypeError("Unsupported padding type : {}".format(keras_layer.padding))
     if is_deconv:
@@ -164,24 +168,31 @@ def _convert_separable_convolution(insym, keras_layer, symtab):
     weightList = keras_layer.get_weights()
     # depthwise conv
     kernel_h, kernel_w, in_channels, depth_mult = weightList[0].shape
+    stride_h, stride_w = keras_layer.strides
     weight0 = weightList[0].transpose([2, 3, 0, 1])
     params0 = {'weight': symtab.new_const(weight0),
                'channels': in_channels * depth_mult,
                'groups': in_channels,
                'kernel_size': [kernel_h, kernel_w],
-               'strides': keras_layer.strides,
-               'dilation': [1, 1]}
+               'strides': [stride_h, stride_w],
+               'dilation': [1, 1],
+               'padding': [0, 0]}
     if keras_layer.padding == 'valid':
-        params0['padding'] = [0, 0]
+        pass
+    # we insert a separate pad operator
     elif keras_layer.padding == 'same':
-        pad_h = kernel_h - 1
-        pad_w = kernel_w - 1
+        in_h = keras_layer.input.shape[1].value
+        in_w = keras_layer.input.shape[2].value
+        out_h = (in_h + stride_h - 1) // stride_h
+        out_w = (in_w + stride_w - 1) // stride_w
+        pad_h = np.maximum((out_h - 1) * stride_h + kernel_h - in_h, 0)
+        pad_w = np.maximum((out_w - 1) * stride_w + kernel_w - in_w, 0)
         pad_t = pad_h // 2
         pad_l = pad_w // 2
         pad_b = pad_h - pad_t
         pad_r = pad_w - pad_l
-        assert pad_t == pad_r and pad_l == pad_b, "Asymmetry padding not supported"
-        params0['padding'] = [pad_t, pad_l]
+        insym = _sym.pad(data=insym, pad_width=(
+            (0, 0), (0, 0), (pad_t, pad_b), (pad_l, pad_r)))
     else:
         raise TypeError("Unsupported padding type : {}".format(keras_layer.padding))
     depthconv = _sym.conv2d(data=insym, **params0)
@@ -223,21 +234,27 @@ def _convert_pooling(insym, keras_layer, symtab):
     elif pool_type == 'GlobalAveragePooling2D':
         return _convert_flatten(_sym.global_avg_pool2d(insym), keras_layer, symtab)
     else:
-        params = {'pool_size': keras_layer.pool_size,
-                  'strides': keras_layer.strides,
-                  'padding': [1, 1]}
+        pool_h, pool_w = keras_layer.pool_size
+        stride_h, stride_w = keras_layer.strides
+        params = {'pool_size': [pool_h, pool_w],
+                  'strides': [stride_h, stride_w],
+                  'padding': [0, 0]}
         if keras_layer.padding == 'valid':
-            params['padding'] = [0, 0]
+            pass
+        # we insert a separate pad operator
         elif keras_layer.padding == 'same':
-            pool_size = params['pool_size']
-            pad_h = pool_size[0] - 1
-            pad_w = pool_size[1] - 1
+            in_h = keras_layer.input.shape[1].value
+            in_w = keras_layer.input.shape[2].value
+            out_h = (in_h + stride_h - 1) // stride_h
+            out_w = (in_w + stride_w - 1) // stride_w
+            pad_h = np.maximum((out_h - 1) * stride_h + pool_h - in_h, 0)
+            pad_w = np.maximum((out_w - 1) * stride_w + pool_w - in_w, 0)
             pad_t = pad_h // 2
             pad_l = pad_w // 2
             pad_b = pad_h - pad_t
             pad_r = pad_w - pad_l
-            assert pad_t == pad_r and pad_l == pad_b, "Asymmetry padding not supported"
-            params['padding'] = [pad_t, pad_l]
+            insym = _sym.pad(data=insym, pad_width=(
+                (0, 0), (0, 0), (pad_t, pad_b), (pad_l, pad_r)))
         else:
             raise TypeError("Unsupported padding type : {}".format(keras_layer.padding))
         if pool_type == 'MaxPooling2D':

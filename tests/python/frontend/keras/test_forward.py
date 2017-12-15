@@ -68,9 +68,9 @@ def verify_forward_dense():
 
 def verify_forward_transpose_conv():
     data = keras.layers.Input(shape=(224,224,3))
-    x = keras.layers.Conv2D(filters=10, kernel_size=(3,3), strides=(2,2), padding='valid')(data)
+    x = keras.layers.Conv2D(filters=10, kernel_size=(3,3), strides=(2,2), padding='same')(data)
     x = keras.applications.mobilenet.DepthwiseConv2D(kernel_size=(3,3), padding='same')(x)
-    x = keras.layers.Conv2DTranspose(filters=64, kernel_size=(3,3), padding='same')(x)
+    x = keras.layers.Conv2DTranspose(filters=64, kernel_size=(3,3), padding='valid')(x)
     x = keras.layers.GlobalMaxPooling2D()(x)
     keras_model = keras.models.Model(data, x)
     verify_keras_frontend(keras_model)
