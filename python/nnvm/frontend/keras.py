@@ -237,11 +237,9 @@ def _convert_pooling(insym, keras_layer, symtab):
         pool_h, pool_w = keras_layer.pool_size
         stride_h, stride_w = keras_layer.strides
         params = {'pool_size': [pool_h, pool_w],
-                  'strides': [stride_h, stride_w],
-                  'padding': [0, 0]}
+                  'strides': [stride_h, stride_w]}
         if keras_layer.padding == 'valid':
-            pass
-        # we insert a separate pad operator
+            params['padding'] = [0, 0]
         elif keras_layer.padding == 'same':
             in_h = keras_layer.input.shape[1].value
             in_w = keras_layer.input.shape[2].value
@@ -253,13 +251,15 @@ def _convert_pooling(insym, keras_layer, symtab):
             pad_l = pad_w // 2
             pad_b = pad_h - pad_t
             pad_r = pad_w - pad_l
-            insym = _sym.pad(data=insym, pad_width=(
-                (0, 0), (0, 0), (pad_t, pad_b), (pad_l, pad_r)))
+            params['padding'] = [pad_t, pad_l]
+            if pad_b > pad_t and pad_r > pad_l:
+                params['ceil_mode'] = True
         else:
             raise TypeError("Unsupported padding type : {}".format(keras_layer.padding))
         if pool_type == 'MaxPooling2D':
             return _sym.max_pool2d(insym, **params)
         elif pool_type == 'AveragePooling2D':
+            # TODO: in keras, padded zeros are not calculated
             return _sym.avg_pool2d(insym, **params)
         else:
             raise TypeError("Unsupported pooling type : {}".format(keras_layer))
