@@ -104,7 +104,7 @@ struct LeakyReLUParam : public dmlc::Parameter<LeakyReLUParam> {
 
 struct PadParam : public dmlc::Parameter<PadParam> {
   float pad_value;
-  Tuple<Tuple<int>> pad_width;
+  Tuple<Tuple<int> > pad_width;
 
   DMLC_DECLARE_PARAMETER(PadParam) {
     DMLC_DECLARE_FIELD(pad_value).set_default(0.0)
