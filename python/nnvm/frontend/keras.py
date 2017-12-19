@@ -123,7 +123,8 @@ def _convert_convolution(insym, keras_layer, symtab):
               'kernel_size': [kernel_h, kernel_w],
               'strides': [stride_h, stride_w],
               'dilation': dilation,
-              'padding': [0, 0]}
+              'padding': [0, 0],
+              'use_bias': False}
     if is_depthconv:
         params['channels'] = in_channels * depth_mult
         params['groups'] = in_channels
@@ -176,7 +177,8 @@ def _convert_separable_convolution(insym, keras_layer, symtab):
                'kernel_size': [kernel_h, kernel_w],
                'strides': [stride_h, stride_w],
                'dilation': [1, 1],
-               'padding': [0, 0]}
+               'padding': [0, 0],
+               'use_bias': False}
     if keras_layer.padding == 'valid':
         pass
     # we insert a separate pad operator
@@ -203,7 +205,8 @@ def _convert_separable_convolution(insym, keras_layer, symtab):
                'groups': 1,
                'kernel_size': [1, 1],
                'strides': [1, 1],
-               'dilation': [1, 1]}
+               'dilation': [1, 1],
+               'use_bias': False}
     if keras_layer.use_bias:
         params1['use_bias'] = True
         params1['bias'] = symtab.new_const(weightList[2])

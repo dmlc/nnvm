@@ -93,8 +93,6 @@ def verify_forward_vgg16():
     verify_keras_frontend(keras_model)
 
 
-# xception success with target='cuda', fails with 'llvm'
-# because llvm conv schedule doesn't work when input size is 299x299x3
 def verify_forward_xception():
     keras_model = keras.applications.xception.Xception(include_top=True, weights='imagenet',
         input_shape=(299,299,3), classes=1000)
@@ -111,9 +109,9 @@ if __name__ == '__main__':
     verify_forward_softrelu()
     verify_forward_leaky_relu()
     verify_forward_dense()
-    verify_forward_separable_conv()
     verify_forward_transpose_conv()
+    verify_forward_separable_conv()
 
     verify_forward_vgg16()
+    verify_forward_xception()
     verify_forward_resnet50()
-    # verify_forward_xception()
