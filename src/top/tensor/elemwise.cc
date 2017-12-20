@@ -406,7 +406,5 @@ NNVM_REGISTER_ELEMWISE_BINARY_SCALAR(__rpow_scalar__)
     };
 });
 
-
-
 }  // namespace top
 }  // namespace nnvm
