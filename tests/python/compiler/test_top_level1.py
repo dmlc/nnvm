@@ -117,7 +117,7 @@ def test_sym_scalar_pow():
         m = graph_runtime.create(graph, lib, ctx)
         m.run(x=data, head_grads=head_grads)
         out = m.get_output(0, tvm.nd.empty(oshape, dtype))
-        y_np = head_grads * scalar * data**(scalar - 1)
+        y_np = head_grads * scalar * (data**(scalar - 1))
         np.testing.assert_allclose(out.asnumpy(), y_np, atol=1e-5, rtol=1e-5)
 
 def test_scalar_sym_pow():
