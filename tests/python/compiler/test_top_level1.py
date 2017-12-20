@@ -8,7 +8,7 @@ from nnvm.testing.config import ctx_list
 
 
 def test_helper(symbol, inputs, oshape, dtype,
-                np_forward, np_backward=None, opt_level=0):
+                np_forward, np_backward=None):
     ishapes = {}
     input_syms = []
     np_inputs = {}
@@ -19,8 +19,7 @@ def test_helper(symbol, inputs, oshape, dtype,
             input_syms.append(v[1])
 
     for target, ctx in ctx_list():
-        with nnvm.compiler.build_config(opt_level=opt_level):
-            graph, lib, _ = nnvm.compiler.build(symbol, target, ishapes)
+        graph, lib, _ = nnvm.compiler.build(symbol, target, ishapes)
         m = graph_runtime.create(graph, lib, ctx)
         m.run(**np_inputs)
         y_np = np_forward(**np_inputs)
@@ -98,6 +97,7 @@ def test_scalar_sym_pow():
 def test_exp():
     x = sym.Variable("x")
     y = sym.exp(x)
+
     def forward(x):
         return np.exp(x)
 
@@ -113,6 +113,7 @@ def test_exp():
 def test_log():
     x = sym.Variable("x")
     y = sym.log(x)
+
     def forward(x):
         return np.log(x)
 
