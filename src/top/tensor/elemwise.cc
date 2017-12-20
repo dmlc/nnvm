@@ -345,14 +345,17 @@ NNVM_REGISTER_ELEMWISE_BINARY_SCALAR(__pow_scalar__)
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
     // y = n0^scalar
-    // grad_0 = grad_y * n0^(scalar - 1)
-    double scalar = std::stod(n->attrs.dict["scalar"]) - 1;
+    // grad_0 = grad_y * scalar * n0^(scalar - 1)
+    double scalar = std::stod(n->attrs.dict["scalar"]);
     NodeEntry sub0 = MakeNode("__pow_scalar__", n->attrs.name + "_grad_sub_0",
                               {n->inputs[0]},
+                              {{"scalar", std::to_string(scalar - 1)}});
+    NodeEntry sub1 = MakeNode("__mul_scalar__", n->attrs.name + "_grad_sub_1",
+                              {ograds[0]},
                               {{"scalar", std::to_string(scalar)}});
     return std::vector<NodeEntry>{
       MakeNode("elemwise_mul", n->attrs.name + "_grad_0",
-               {ograds[0], sub0})
+               {sub0, sub1})
     };
 });
 
