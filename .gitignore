@@ -51,3 +51,6 @@ perf
 *.h5
 synset.txt
 cat.jpg
+
+# Mac OS X
+.DS_Store

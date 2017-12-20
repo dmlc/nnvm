@@ -23,6 +23,64 @@ def test_relu():
         out = m.get_output(0, tvm.nd.empty(oshape, dtype))
         np.testing.assert_allclose(out.asnumpy(), data, atol=1e-5, rtol=1e-5)
 
+def test_sym_scalar_pow():
+    scalar = 3
+    x = sym.Variable("x")
+    y = x**scalar
+    dtype = "float32"
+    dshape = (1, 3, 32, 32)
+    oshape = dshape
+    for target, ctx in ctx_list():
+        graph, lib, _ = nnvm.compiler.build(y, target, {"x": dshape})
+        m = graph_runtime.create(graph, lib, ctx)
+        data = np.random.uniform(size=dshape).astype(dtype)
+        m.run(x=data)
+        y_np = data**scalar
+        out = m.get_output(0, tvm.nd.empty(oshape, dtype))
+        np.testing.assert_allclose(out.asnumpy(), y_np, atol=1e-5, rtol=1e-5)
+
+        # backward
+        graph._set_symbol_list_attr('grad_ys', y)
+        graph._set_symbol_list_attr('grad_xs', x)
+        graph._set_symbol_list_attr('grad_ys_out_grad', sym.Variable("head_grads"))
+        graph = graph.apply('Gradient')
+        head_grads = np.random.uniform(size=dshape).astype(dtype)
+        graph, lib, _ = nnvm.compiler.build(graph, target, {"x": dshape, "head_grads": dshape})
+        m = graph_runtime.create(graph, lib, ctx)
+        m.run(x=data, head_grads=head_grads)
+        out = m.get_output(0, tvm.nd.empty(oshape, dtype))
+        y_np = head_grads * scalar * data**(scalar - 1)
+        np.testing.assert_allclose(out.asnumpy(), y_np, atol=1e-5, rtol=1e-5)
+
+def test_scalar_sym_pow():
+    scalar = 3
+    x = sym.Variable("x")
+    y = scalar**x
+    dtype = "float32"
+    dshape = (1, 3, 32, 32)
+    oshape = dshape
+    for target, ctx in ctx_list():
+        graph, lib, _ = nnvm.compiler.build(y, target, {"x": dshape})
+        m = graph_runtime.create(graph, lib, ctx)
+        data = np.random.uniform(size=dshape).astype(dtype)
+        m.run(x=data)
+        y_np = scalar**data
+        out = m.get_output(0, tvm.nd.empty(oshape, dtype))
+        np.testing.assert_allclose(out.asnumpy(), y_np, atol=1e-5, rtol=1e-5)
+
+        # backward
+        graph._set_symbol_list_attr('grad_ys', y)
+        graph._set_symbol_list_attr('grad_xs', x)
+        graph._set_symbol_list_attr('grad_ys_out_grad', sym.Variable("head_grads"))
+        graph = graph.apply('Gradient')
+        head_grads = np.random.uniform(size=dshape).astype(dtype)
+        graph, lib, _ = nnvm.compiler.build(graph, target, {"x": dshape, "head_grads": dshape})
+        m = graph_runtime.create(graph, lib, ctx)
+        m.run(x=data, head_grads=head_grads)
+        out = m.get_output(0, tvm.nd.empty(oshape, dtype))
+        y_np = head_grads * np.log(scalar) * y_np
+        np.testing.assert_allclose(out.asnumpy(), y_np, atol=1e-5, rtol=1e-5)
+
 
 def test_exp():
     x = sym.Variable("x")
@@ -37,6 +95,19 @@ def test_exp():
         m.run(x=data)
         out = m.get_output(0, tvm.nd.empty(oshape, dtype))
         y_np = np.exp(data)
+        np.testing.assert_allclose(out.asnumpy(), y_np, atol=1e-5, rtol=1e-5)
+
+        # backward
+        graph._set_symbol_list_attr('grad_ys', y)
+        graph._set_symbol_list_attr('grad_xs', x)
+        graph._set_symbol_list_attr('grad_ys_out_grad', sym.Variable("head_grads"))
+        graph = graph.apply('Gradient')
+        head_grads = np.random.uniform(size=dshape).astype(dtype)
+        graph, lib, _ = nnvm.compiler.build(graph, target, {"x": dshape, "head_grads": dshape})
+        m = graph_runtime.create(graph, lib, ctx)
+        m.run(x=data, head_grads=head_grads)
+        out = m.get_output(0, tvm.nd.empty(oshape, dtype))
+        y_np = np.exp(data) * head_grads
         np.testing.assert_allclose(out.asnumpy(), y_np, atol=1e-5, rtol=1e-5)
 
 
@@ -56,6 +127,19 @@ def test_log():
         y_np = np.log(data)
         np.testing.assert_allclose(out.asnumpy(), y_np, atol=1e-5, rtol=1e-5)
 
+        # backward
+        graph._set_symbol_list_attr('grad_ys', y)
+        graph._set_symbol_list_attr('grad_xs', x)
+        graph._set_symbol_list_attr('grad_ys_out_grad', sym.Variable("head_grads"))
+        graph = graph.apply('Gradient')
+        head_grads = np.random.uniform(size=dshape).astype(dtype)
+        graph, lib, _ = nnvm.compiler.build(graph, target, {"x": dshape, "head_grads": dshape})
+        m = graph_runtime.create(graph, lib, ctx)
+        m.run(x=data, head_grads=head_grads)
+        out = m.get_output(0, tvm.nd.empty(oshape, dtype))
+        y_np = head_grads / data
+        np.testing.assert_allclose(out.asnumpy(), y_np, atol=1e-5, rtol=1e-5)
+
 
 def test_tanh():
     x = sym.Variable("x")
@@ -73,6 +157,19 @@ def test_tanh():
         y_np = np.sinh(data) / np.cosh(data)
         np.testing.assert_allclose(out.asnumpy(), y_np, atol=1e-5, rtol=1e-5)
 
+        # backward
+        graph._set_symbol_list_attr('grad_ys', y)
+        graph._set_symbol_list_attr('grad_xs', x)
+        graph._set_symbol_list_attr('grad_ys_out_grad', sym.Variable("head_grads"))
+        graph = graph.apply('Gradient')
+        head_grads = np.random.uniform(size=dshape).astype(dtype)
+        graph, lib, _ = nnvm.compiler.build(graph, target, {"x": dshape, "head_grads": dshape})
+        m = graph_runtime.create(graph, lib, ctx)
+        m.run(x=data, head_grads=head_grads)
+        out = m.get_output(0, tvm.nd.empty(oshape, dtype))
+        y_np = head_grads * (1 - y_np**2)
+        np.testing.assert_allclose(out.asnumpy(), y_np, atol=1e-5, rtol=1e-5)
+
 
 def test_sigmoid():
     x = sym.Variable("x")
@@ -87,6 +184,19 @@ def test_sigmoid():
         m.run(x=data)
         out = m.get_output(0, tvm.nd.empty(oshape, dtype))
         y_np = 1.0 / (1.0 + np.exp(-data))
+        np.testing.assert_allclose(out.asnumpy(), y_np, atol=1e-5, rtol=1e-5)
+
+        # backward
+        graph._set_symbol_list_attr('grad_ys', y)
+        graph._set_symbol_list_attr('grad_xs', x)
+        graph._set_symbol_list_attr('grad_ys_out_grad', sym.Variable("head_grads"))
+        graph = graph.apply('Gradient')
+        head_grads = np.random.uniform(size=dshape).astype(dtype)
+        graph, lib, _ = nnvm.compiler.build(graph, target, {"x": dshape, "head_grads": dshape})
+        m = graph_runtime.create(graph, lib, ctx)
+        m.run(x=data, head_grads=head_grads)
+        out = m.get_output(0, tvm.nd.empty(oshape, dtype))
+        y_np = head_grads * y_np *(1 - y_np)
         np.testing.assert_allclose(out.asnumpy(), y_np, atol=1e-5, rtol=1e-5)
 
 
@@ -270,6 +380,8 @@ if __name__ == "__main__":
     test_batchnorm()
     test_dense()
     test_relu()
+    test_sym_scalar_pow
+    test_scalar_sym_pow()
     test_exp()
     test_log()
     test_tanh()
