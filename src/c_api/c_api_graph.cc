@@ -9,6 +9,7 @@
 #include <nnvm/graph.h>
 #include <nnvm/pass.h>
 #include <dmlc/json.h>
+#include <vector>
 #include "./c_api_common.h"
 
 using namespace nnvm;
@@ -18,6 +19,51 @@ int NNGraphCreate(SymbolHandle symbol, GraphHandle *graph) {
   API_BEGIN();
   g->outputs = static_cast<Symbol*>(symbol)->outputs;
   *graph = g;
+  API_END_HANDLE_ERROR(delete g);
+}·
+
+int NNBackwardGraphCreate(SymbolHandle symbol,
+		                  const std::vector<OpReqType>& grad_req_types,
+						  const std::vector<SymbolHandle>& head_grads,
+						  GraphHandle *graph) {
+  Graph* g = new Graph();
+  API_BEGIN();
+  g->outputs = static_cast<Symbol*>(symbol)->outputs;
+  bool need_grad = false;
+  for (OpReqType req : grad_req_types) {
+      if (req != kNullOp) need_grad = true;
+  }
+  CHECK(need_grad)
+    << "Trying to build backward pass on a graph which doesn't require gradient. "
+	<< "At least one node with grad_req rather than 'null' is required in the "
+	<< "graph to call backward pass creation function.";
+
+  // Setup head grad entry
+  bool has_head_grad = false;
+  if (head_grads.size() > 0) {
+	  CHECK_EQ(g->outputs.size(), head_grads.size())
+	    << "Graph output number and head gradient number mismatch.";
+	  has_head_grad =true;
+  }
+  std::vector<NodeEntry> head_grad_entry;
+  head_grad_entry.resize(g->outputs.size());
+  for (size_t i = 0; i < g->outputs.size(); ++i) {
+    if (has_head_grad) {
+      auto& head_symbol_outputs = static_cast<Symbol*>(head_grads[i])->outputs;
+      CHECK_EQ(head_symbol_outputs, 1)
+        << "Each head grad symbol must contain only one output.";
+    	  auto& head_grad_node = head_symbol_outputs.front();
+    	  CHECK(head_grad_node.node->is_variable())
+    	    << "Each head grad symbol must be a placeholder variable.";
+    	  head_grad_entry.emplace_back(NodeEntry{head_grad_node, 0, 0});
+    }
+    else {
+    	  NodePtr one_node = Node::Create();
+      one_node->attrs.op = Op::Get("__one__");
+    	  head_grad_entry.emplace_back(NodeEntry{one_node, 0, 0});
+    }
+  }
+
   API_END_HANDLE_ERROR(delete g);
 }
 
