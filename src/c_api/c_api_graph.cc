@@ -8,8 +8,10 @@
 #include <nnvm/symbolic.h>
 #include <nnvm/graph.h>
 #include <nnvm/pass.h>
+#include <nnvm/pass_functions.h>
 #include <dmlc/json.h>
 #include <vector>
+#include <tvm/runtime/c_runtime_api.h>
 #include "./c_api_common.h"
 
 using namespace nnvm;
@@ -20,23 +22,24 @@ int NNGraphCreate(SymbolHandle symbol, GraphHandle *graph) {
   g->outputs = static_cast<Symbol*>(symbol)->outputs;
   *graph = g;
   API_END_HANDLE_ERROR(delete g);
-}·
+}
 
 int NNBackwardGraphCreate(SymbolHandle symbol,
-		                  const std::vector<OpReqType>& grad_req_types,
-						  const std::vector<SymbolHandle>& head_grads,
-						  GraphHandle *graph) {
+                          const std::vector<OpReqType>& grad_req_types,
+                          const std::vector<SymbolHandle>& head_grads,
+                          GraphHandle *graph) {
   Graph* g = new Graph();
   API_BEGIN();
-  g->outputs = static_cast<Symbol*>(symbol)->outputs;
+  auto* symbol_ptr = static_cast<Symbol*>(symbol);
+  g->outputs = symbol_ptr->outputs;
   bool need_grad = false;
   for (OpReqType req : grad_req_types) {
-      if (req != kNullOp) need_grad = true;
+    if (req != kNullOp) need_grad = true;
   }
   CHECK(need_grad)
     << "Trying to build backward pass on a graph which doesn't require gradient. "
-	<< "At least one node with grad_req rather than 'null' is required in the "
-	<< "graph to call backward pass creation function.";
+	  << "At least one node with grad_req rather than 'null' is required in the "
+	  << "graph to call backward pass creation function.";
 
   // Setup head grad entry
   bool has_head_grad = false;
@@ -58,12 +61,35 @@ int NNBackwardGraphCreate(SymbolHandle symbol,
     	  head_grad_entry.emplace_back(NodeEntry{head_grad_node, 0, 0});
     }
     else {
-    	  NodePtr one_node = Node::Create();
+      NodePtr one_node = Node::Create();
       one_node->attrs.op = Op::Get("__one__");
     	  head_grad_entry.emplace_back(NodeEntry{one_node, 0, 0});
     }
   }
 
+  // Setup backward output nodes
+  std::vector<NodePtr> args = symbol_ptr->ListInputs(Symbol::kReadOnlyArgs);
+  std::vector<NodeEntry> xs;
+  for (size_t i = 0; i < grad_req_types.size(); ++i) {
+    if (grad_req_types[i] != kNullOp) {
+      xs.emplace_back(NodeEntry{args[i], 0, 0});
+    }
+  }
+
+  // Create backward graph
+  // TODO(yaow): Add mirror function to optimize memory?
+  std::vector<const Op*> zero_ops;
+  zero_ops.push_back(Op::Get("zeros_like"));
+  zero_ops.push_back(Op::Get("_zeros"));
+  Graph g_grad = pass::Gradient(
+    *g, symbol_ptr->outputs, xs, head_grad_entry,
+    nullptr, nullptr, nullptr, zero_ops, "_copy");
+    CHECK_EQ(g_grad.outputs.size(), xs.size());
+  for (const auto &e : g_grad.outputs) {
+    g->outputs.push_back(e);
+  }
+
+  *graph = g;
   API_END_HANDLE_ERROR(delete g);
 }
 
