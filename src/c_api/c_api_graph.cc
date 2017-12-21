@@ -64,7 +64,7 @@ int NNFullGraphCreate(SymbolHandle symbol,
   for (size_t i = 0; i < g->outputs.size(); ++i) {
     if (has_head_grad) {
       auto& head_symbol_outputs = static_cast<Symbol*>(head_grads[i])->outputs;
-      CHECK_EQ(head_symbol_outputs, 1)
+      CHECK_EQ(head_symbol_outputs.size(), 1)
         << "Each head grad symbol must contain only one output.";
     	  auto& head_grad_node = head_symbol_outputs.front();
     	  CHECK(head_grad_node.node->is_variable())
