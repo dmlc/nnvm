@@ -1,6 +1,6 @@
 """
-Quick Start - Compile and Deploy Resnet-18 Model
-================================================
+Quick Start - End-to-End Tutorial for NNVM/TVM Pipeline
+=======================================================
 **Author**: `Yao Wang <https://github.com/kevinthesun>`_
 
 This example shows how to build a neural network with NNVM python frontend and
@@ -21,7 +21,7 @@ Notice that you need to build tvm with cuda and llvm.
 #      :align: center
 #      :scale: 100%
 #
-# In this tutorial, we'll choose cuda and llvm as target hardware. 
+# In this tutorial, we'll choose cuda and llvm as target backends.
 # To begin with, let's import NNVM and TVM.
 import tvm
 import nnvm.compiler
@@ -79,7 +79,7 @@ with nnvm.compiler.build_config(opt_level=opt_level):
 # Save Compiled Module
 # ----------------------------
 # After compilation, we can save the graph, lib and params into separate files
-# and deploy them to Raspberry Pi device.
+# and deploy them to Nvidia GPU.
 
 from tvm.contrib import util
 
@@ -123,6 +123,12 @@ print(out.asnumpy()[0][0:10])
 # environment, please change the three lines below: change the
 # :code:`use_rasp` to True, also change the host and port with your
 # device's host address and port number.
+
+# If we run the example locally for demonstration, we can simply set the 
+# compilation target as `llvm`. 
+# To run it on the Raspberry Pi, you need to specify its instruction set. 
+# `llvm -target=armv7l-none-linux-gnueabihf -mcpu=cortex-a53 -mattr=+neon`
+# is the recommended compilation configuration, thanks to Ziheng's work.
 
 from tvm.contrib import rpc
 
