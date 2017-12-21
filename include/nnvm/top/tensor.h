@@ -63,7 +63,7 @@ enum TypeFlag {
 };
 
 #define DMLC_DECLARE_DTYPE_FIELD(name)                              \
-  DMLC_DECLARE_FIELD(name)                                         \
+  DMLC_DECLARE_FIELD(name)                                          \
   .add_enum("float16", kFloat16)                                    \
   .add_enum("float32", kFloat32)                                    \
   .add_enum("float64", kFloat64)                                    \
@@ -74,7 +74,7 @@ enum TypeFlag {
   .add_enum("int8",  kInt8)                                         \
   .add_enum("int16", kInt16)                                        \
   .add_enum("int32", kInt32)                                        \
-  .add_enum("int64", kInt64)                                        \
+  .add_enum("int64", kInt64)
 
 struct CastParam : public dmlc::Parameter<CastParam> {
   int dtype;
@@ -167,7 +167,7 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
     DMLC_DECLARE_FIELD(shape).set_default(TShape());
     DMLC_DECLARE_DTYPE_FIELD(dtype).set_default(kFloat32)
       .describe("Target data type.");
-    DMLC_DECLARE_FIELD(value).describe("Value to be filled");
+    DMLC_DECLARE_FIELD(value).describe("Value to fill");
   }
 };
 

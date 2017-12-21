@@ -238,47 +238,30 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(copy)
     return std::vector<NodeEntry>{ograds[0]};
 });
 
-// zeros
-NNVM_REGISTER_INIT_OP(zeros)
-.describe(R"code(Fill target with zeros
+DMLC_REGISTER_PARAMETER(InitOpParam);
+
+// fill
+NNVM_REGISTER_INIT_OP(fill)
+.describe(R"code(Fill array with scalar value
 
 )code"  NNVM_ADD_FILELINE)
 .set_support_level(1);
 
-// zeros_like
-NNVM_REGISTER_ELEMWISE_UNARY_OP(zeros_like)
-  .describe(R"code(Return an array of zeros with the same shape and type
+// fill_like
+NNVM_REGISTER_ELEMWISE_UNARY_OP(fill_like)
+  .describe(R"code(Return an scalar value array with the same shape and type
 as the input array
 
 )code"  NNVM_ADD_FILELINE)
 .set_support_level(1)
+.add_arguments(InitOpParam::__FIELDS__())
+.set_attr_parser(ParamParser<InitOpParam>)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
     return std::vector<NodeEntry>{
-      MakeNode("zeros_like", n->attrs.name + "_zero", {n->inputs[0]})
-    };
-});
-
-// ones
-NNVM_REGISTER_INIT_OP(ones)
-.describe(R"code(Return an array of ones with the same shape and type
-as the input array.
-
-)code"  NNVM_ADD_FILELINE)
-.set_support_level(1);
-
-// ones_like
-NNVM_REGISTER_ELEMWISE_UNARY_OP(ones_like)
-  .describe(R"code(Fill target with ones
-
-)code"  NNVM_ADD_FILELINE)
-.set_support_level(1)
-.set_attr<FGradient>(
-  "FGradient", [](const NodePtr& n,
-                  const std::vector<NodeEntry>& ograds){
-    return std::vector<NodeEntry>{
-      MakeNode("zeros_like", n->attrs.name + "_zero", {n->inputs[0]})
+      MakeNode("fill_like", n->attrs.name + "_zero",
+               {n->inputs[0]}, {{"value", "0"}})
     };
 });
 
