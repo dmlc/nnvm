@@ -238,6 +238,50 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(copy)
     return std::vector<NodeEntry>{ograds[0]};
 });
 
+// zeros
+NNVM_REGISTER_INIT_OP(zeros)
+.describe(R"code(Fill target with zeros
+
+)code"  NNVM_ADD_FILELINE)
+.set_support_level(1);
+
+// zeros_like
+NNVM_REGISTER_ELEMWISE_UNARY_OP(zeros_like)
+  .describe(R"code(Return an array of zeros with the same shape and type
+as the input array
+
+)code"  NNVM_ADD_FILELINE)
+.set_support_level(1)
+.set_attr<FGradient>(
+  "FGradient", [](const NodePtr& n,
+                  const std::vector<NodeEntry>& ograds){
+    return std::vector<NodeEntry>{
+      MakeNode("zeros_like", n->attrs.name + "_zero", {n->inputs[0]})
+    };
+});
+
+// ones
+NNVM_REGISTER_INIT_OP(ones)
+.describe(R"code(Return an array of ones with the same shape and type
+as the input array.
+
+)code"  NNVM_ADD_FILELINE)
+.set_support_level(1);
+
+// ones_like
+NNVM_REGISTER_ELEMWISE_UNARY_OP(ones_like)
+  .describe(R"code(Fill target with ones
+
+)code"  NNVM_ADD_FILELINE)
+.set_support_level(1)
+.set_attr<FGradient>(
+  "FGradient", [](const NodePtr& n,
+                  const std::vector<NodeEntry>& ograds){
+    return std::vector<NodeEntry>{
+      MakeNode("zeros_like", n->attrs.name + "_zero", {n->inputs[0]})
+    };
+});
+
 // unary scalar op
 DMLC_REGISTER_PARAMETER(ScalarParam);
 
@@ -295,7 +339,7 @@ NNVM_REGISTER_ELEMWISE_BINARY_SCALAR(__mul_scalar__)
     // grad_0 = grad_y * scalar
     return std::vector<NodeEntry>{
       MakeNode("__mul_scalar__", n->attrs.name + "_grad_0",
-               {ograds[0]}, {{"scalar", n->attrs.dict["scalar"]}}),
+               {ograds[0]}, {{"scalar", n->attrs.dict["scalar"]}})
     };
 });
 
@@ -311,7 +355,7 @@ NNVM_REGISTER_ELEMWISE_BINARY_SCALAR(__div_scalar__)
     // grad_0 = grad_y / scalar
     return std::vector<NodeEntry>{
       MakeNode("__div_scalar__", n->attrs.name + "_grad_0",
-               {ograds[0]}, {{"scalar", n->attrs.dict["scalar"]}}),
+               {ograds[0]}, {{"scalar", n->attrs.dict["scalar"]}})
     };
 });
 
@@ -378,6 +422,8 @@ NNVM_REGISTER_ELEMWISE_BINARY_SCALAR(__rpow_scalar__)
                {ograds[0], sub0})
     };
 });
+
+
 
 }  // namespace top
 }  // namespace nnvm
