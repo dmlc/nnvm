@@ -11,7 +11,6 @@
 #include <nnvm/pass_functions.h>
 #include <dmlc/json.h>
 #include <vector>
-#include <tvm/runtime/c_runtime_api.h>
 #include "./c_api_common.h"
 
 using namespace nnvm;
@@ -24,22 +23,34 @@ int NNGraphCreate(SymbolHandle symbol, GraphHandle *graph) {
   API_END_HANDLE_ERROR(delete g);
 }
 
-int NNBackwardGraphCreate(SymbolHandle symbol,
-                          const std::vector<OpReqType>& grad_req_types,
-                          const std::vector<SymbolHandle>& head_grads,
-                          GraphHandle *graph) {
+int NNFullGraphCreate(SymbolHandle symbol,
+                      const std::vector<std::string>& fixed_args,
+                      const std::vector<SymbolHandle>& head_grads,
+                      GraphHandle *graph) {
   Graph* g = new Graph();
   API_BEGIN();
   auto* symbol_ptr = static_cast<Symbol*>(symbol);
   g->outputs = symbol_ptr->outputs;
-  bool need_grad = false;
-  for (OpReqType req : grad_req_types) {
-    if (req != kNullOp) need_grad = true;
+
+  // Setup backward output nodes
+  std::unordered_map<std::string, NodePtr> arg_name_map;
+  const auto arg_names = symbol_ptr->ListInputNames(Symbol::kReadOnlyArgs);
+  const auto args = symbol_ptr->ListInputs(Symbol::kReadOnlyArgs);
+  CHECK_EQ(arg_names.size(), args.size());
+  if (arg_names.size() == fixed_args.size()) {
+    *graph = g;
+    return 0;
   }
-  CHECK(need_grad)
-    << "Trying to build backward pass on a graph which doesn't require gradient. "
-	  << "At least one node with grad_req rather than 'null' is required in the "
-	  << "graph to call backward pass creation function.";
+  for (size_t i = 0; i < arg_names.size(); ++i) {
+    arg_name_map[arg_names[i]] = args[i];
+  }
+  for (const auto &e : fixed_args) {
+    arg_name_map.erase(e);
+  }
+  std::vector<NodeEntry> xs;
+  for (auto kv : arg_name_map) {
+    xs.emplace_back(NodeEntry{kv.second, 0, 0});
+  }
 
   // Setup head grad entry
   bool has_head_grad = false;
@@ -58,21 +69,12 @@ int NNBackwardGraphCreate(SymbolHandle symbol,
     	  auto& head_grad_node = head_symbol_outputs.front();
     	  CHECK(head_grad_node.node->is_variable())
     	    << "Each head grad symbol must be a placeholder variable.";
-    	  head_grad_entry.emplace_back(NodeEntry{head_grad_node, 0, 0});
+    	  head_grad_entry.emplace_back(NodeEntry{head_grad_node.node, 0, 0});
     }
     else {
       NodePtr one_node = Node::Create();
       one_node->attrs.op = Op::Get("__one__");
     	  head_grad_entry.emplace_back(NodeEntry{one_node, 0, 0});
-    }
-  }
-
-  // Setup backward output nodes
-  std::vector<NodePtr> args = symbol_ptr->ListInputs(Symbol::kReadOnlyArgs);
-  std::vector<NodeEntry> xs;
-  for (size_t i = 0; i < grad_req_types.size(); ++i) {
-    if (grad_req_types[i] != kNullOp) {
-      xs.emplace_back(NodeEntry{args[i], 0, 0});
     }
   }
 
