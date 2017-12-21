@@ -85,10 +85,20 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
 // Shared by softmax and log_softmax
 struct SoftmaxParam : public dmlc::Parameter<SoftmaxParam> {
   int axis;
+  int layout;
 
   DMLC_DECLARE_PARAMETER(SoftmaxParam) {
     DMLC_DECLARE_FIELD(axis).set_default(-1)
         .describe("The axis to sum over when computing softmax.");
+    DMLC_DECLARE_FIELD(layout)
+      .add_enum("NCHW", kNCHW)
+      .add_enum("NHWC", kNHWC)
+      .set_default(kNCHW)
+      .describe("Dimension ordering of data and weight. Can be 'NCHW', 'NHWC', etc."
+                "'N', 'C', 'H', 'W' stands for batch, channel, height, and width"
+                "dimensions respectively. Convolution is applied on the 'H' and"
+                "'W' dimensions.");
+
   }
 };
 
@@ -259,10 +269,19 @@ struct GlobalPool2DParam : public dmlc::Parameter<GlobalPool2DParam> {
 
 struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
   int scale;
+  int layout;
 
   DMLC_DECLARE_PARAMETER(UpSamplingParam) {
     DMLC_DECLARE_FIELD(scale)
       .describe("upsampling scaling factor");
+    DMLC_DECLARE_FIELD(layout)
+      .add_enum("NCHW", kNCHW)
+      .add_enum("NHWC", kNHWC)
+      .set_default(kNCHW)
+      .describe("Dimension ordering of data and weight. Can be 'NCHW', 'NHWC', etc."
+                "'N', 'C', 'H', 'W' stands for batch, channel, height, and width"
+                "dimensions respectively. Convolution is applied on the 'H' and"
+                "'W' dimensions.");
   }
 };
 
