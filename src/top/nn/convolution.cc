@@ -56,6 +56,7 @@ inline bool Conv2DInferShape(const nnvm::NodeAttrs& attrs,
     NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape,
                             Conv2DParam::kBias, TShape({param.channels}));
   }
+
   // dilation
   dim_t dilated_ksize_y = 1 + (param.kernel_size[0] - 1) * param.dilation[0];
   dim_t dilated_ksize_x = 1 + (param.kernel_size[1] - 1) * param.dilation[1];

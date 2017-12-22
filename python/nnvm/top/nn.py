@@ -34,8 +34,7 @@ reg.register_pattern("pad", OpPattern.INJECTIVE)
 def compute_softmax(attrs, inputs, _):
     """Compute definition of softmax"""
     axis = attrs.get_int("axis")
-    layout = attrs["layout"]
-    return topi.nn.softmax(inputs[0], axis, layout)
+    return topi.nn.softmax(inputs[0], axis)
 
 
 @reg.register_schedule("softmax")
@@ -95,7 +94,8 @@ def compute_conv2d(attrs, inputs, _):
         raise ValueError("not support arbitrary group number for now")
     if attrs.get_bool("use_bias"):
         bias = inputs[2]
-        bias = topi.expand_dims(bias, axis=1, num_newaxis=2)
+        expand_axis = 1 if layout == "NCH" else 0
+        bias = topi.expand_dims(bias, axis=expand_axis, num_newaxis=2)
         out = topi.broadcast_add(out, bias)
     return out
 
@@ -190,6 +190,13 @@ reg.register_pattern("avg_pool2d", OpPattern.OUT_ELEMWISE_FUSABLE)
 
 
 # global_max_pool2d
+@reg.register_compute("global_max_pool2d")
+def compute_global_max_pool2d(attrs, inputs, _):
+    """Compute definition of global_max_pool2d"""
+    layout = attrs["layout"]
+    assert layout == "NCHW" or layout == "NHWC"
+    return topi.nn.global_pool(inputs[0], pool_type='max')
+
 @reg.register_schedule("global_max_pool2d")
 def schedule_global_max_pool2d(_, outs, target):
     """Schedule definition of global_max_pool2d"""
