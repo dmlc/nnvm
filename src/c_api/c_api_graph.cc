@@ -24,8 +24,10 @@ int NNGraphCreate(SymbolHandle symbol, GraphHandle *graph) {
 }
 
 int NNFullGraphCreate(SymbolHandle symbol,
-                      const std::vector<std::string>& fixed_args,
-                      const std::vector<SymbolHandle>& head_grads,
+                      const char** fixed_args,
+                      const unsigned int num_fixed_args,
+                      SymbolHandle* head_grads,
+                      const unsigned int num_head_grads,
                       GraphHandle *graph) {
   Graph* g = new Graph();
   API_BEGIN();
@@ -37,15 +39,15 @@ int NNFullGraphCreate(SymbolHandle symbol,
   const auto arg_names = symbol_ptr->ListInputNames(Symbol::kReadOnlyArgs);
   const auto args = symbol_ptr->ListInputs(Symbol::kReadOnlyArgs);
   CHECK_EQ(arg_names.size(), args.size());
-  if (arg_names.size() == fixed_args.size()) {
+  if (arg_names.size() == num_fixed_args) {
     *graph = g;
     return 0;
   }
   for (size_t i = 0; i < arg_names.size(); ++i) {
     arg_name_map[arg_names[i]] = args[i];
   }
-  for (const auto &e : fixed_args) {
-    arg_name_map.erase(e);
+  for (size_t i = 0; i < num_fixed_args; ++i) {
+    arg_name_map.erase(std::string(fixed_args[i]));
   }
   std::vector<NodeEntry> xs;
   for (auto kv : arg_name_map) {
@@ -54,27 +56,26 @@ int NNFullGraphCreate(SymbolHandle symbol,
 
   // Setup head grad entry
   bool has_head_grad = false;
-  if (head_grads.size() > 0) {
-	  CHECK_EQ(g->outputs.size(), head_grads.size())
-	    << "Graph output number and head gradient number mismatch.";
-	  has_head_grad =true;
+  if (num_head_grads > 0) {
+    CHECK_EQ(g->outputs.size(), num_head_grads)
+      << "Graph output number and head gradient number mismatch.";
+    has_head_grad = true;
   }
   std::vector<NodeEntry> head_grad_entry;
-  head_grad_entry.resize(g->outputs.size());
   for (size_t i = 0; i < g->outputs.size(); ++i) {
     if (has_head_grad) {
       auto& head_symbol_outputs = static_cast<Symbol*>(head_grads[i])->outputs;
       CHECK_EQ(head_symbol_outputs.size(), 1)
         << "Each head grad symbol must contain only one output.";
-    	  auto& head_grad_node = head_symbol_outputs.front();
-    	  CHECK(head_grad_node.node->is_variable())
-    	    << "Each head grad symbol must be a placeholder variable.";
-    	  head_grad_entry.emplace_back(NodeEntry{head_grad_node.node, 0, 0});
-    }
-    else {
+      auto& head_grad_node = head_symbol_outputs.front();
+      CHECK(head_grad_node.node->is_variable())
+        << "Each head grad symbol must be a placeholder variable.";
+      head_grad_entry.push_back(std::move(head_grad_node));
+    } else {
       NodePtr one_node = Node::Create();
-      one_node->attrs.op = Op::Get("__one__");
-    	  head_grad_entry.emplace_back(NodeEntry{one_node, 0, 0});
+      one_node->attrs.op = Op::Get("ones_like");
+      one_node->inputs.push_back(g->outputs[i]);
+      head_grad_entry.emplace_back(NodeEntry{one_node, 0, 0});
     }
   }
 
@@ -85,7 +86,7 @@ int NNFullGraphCreate(SymbolHandle symbol,
   zero_ops.push_back(Op::Get("_zeros"));
   Graph g_grad = pass::Gradient(
     *g, symbol_ptr->outputs, xs, head_grad_entry,
-    nullptr, nullptr, nullptr, zero_ops, "_copy");
+    nullptr, nullptr, nullptr, zero_ops, "copy");
     CHECK_EQ(g_grad.outputs.size(), xs.size());
   for (const auto &e : g_grad.outputs) {
     g->outputs.push_back(e);

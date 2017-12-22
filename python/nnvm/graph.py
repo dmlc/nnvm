@@ -282,10 +282,10 @@ def create(symbol, need_backward=False, fixed_args=None, head_grads=None):
             symbol.handle, ctypes.byref(ghandle)))
     else:
         fixed_args_list = fixed_args or []
-        head_grads_list = [sym.handle for sym in head_grads] or []
+        head_grads_list = [sym.handle for sym in head_grads] if head_grads else []
         c_fixed_arg_array = c_array(ctypes.c_char_p, fixed_args_list)
-        c_head_grads_array = c_array(ctypes.byref, head_grads_list)
-        check_call(_LIB>NNFullGraphCreate(
-            symbol.handle, c_fixed_arg_array,
-            c_head_grads_array, ctypes.byref(ghandle)))
+        c_head_grads_array = c_array(ctypes.c_void_p, head_grads_list)
+        check_call(_LIB.NNFullGraphCreate(
+            symbol.handle, c_fixed_arg_array, ctypes.c_uint(len(fixed_args_list)),
+            c_head_grads_array, ctypes.c_uint(len(head_grads_list)), ctypes.byref(ghandle)))
     return Graph(ghandle)
