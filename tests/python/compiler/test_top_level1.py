@@ -229,13 +229,20 @@ def test_batchnorm():
 def verify_concatenate(ishape, axis):
     x = [sym.Variable("x%d" % i) for i in range(len(ishape))]
     y = sym.concatenate(*x, axis=axis) + 1
-
-    def forward(**kwargs):
-        return np.concatenate(tuple(kwargs.values()), axis=axis) + 1
-
     dtype = "float32"
-    inputs = dict(("x%d" % i, (ishape[i],)) for (i, input) in enumerate(x))
-    helper(y, inputs, dtype, forward)
+    for target, ctx in ctx_list():
+        # set input
+        data = []
+        for i, shape in enumerate(ishape):
+            data.append(np.random.uniform(size=shape).astype(dtype))
+        pdict = {"x%d" % i :  v for i, v in enumerate(data)}
+        shape = {"x%d" % i :  v.shape for i, v in enumerate(data)}
+        graph, lib, _ = nnvm.compiler.build(y, target, shape)
+        m = graph_runtime.create(graph, lib, ctx)
+        m.run(**pdict)
+        out_np = np.concatenate(data, axis=axis) + 1
+        out = m.get_output(0, tvm.nd.empty(out_np.shape))
+        np.testing.assert_allclose(out.asnumpy(), out_np, atol=1e-5, rtol=1e-5)
 
 
 def test_concatenate():
