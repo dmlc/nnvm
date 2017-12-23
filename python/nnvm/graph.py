@@ -6,6 +6,7 @@ This is a developer API that is used to manipulate and transform graphs.
 """
 from __future__ import absolute_import as _abs
 
+import sys
 import ctypes
 import json
 from ._base import _LIB
@@ -281,7 +282,11 @@ def create(symbol, need_backward=False, fixed_args=None, head_grads=None):
         check_call(_LIB.NNGraphCreate(
             symbol.handle, ctypes.byref(ghandle)))
     else:
-        fixed_args_list = fixed_args or []
+        if sys.version_info[0] < 3:
+            fixed_args_list = fixed_args or []
+        else:
+            fixed_args_list = [item.encode('utf-8') for item in fixed_args] \
+                if fixed_args else []
         head_grads_list = [sym.handle for sym in head_grads] if head_grads else []
         c_fixed_arg_array = c_array(ctypes.c_char_p, fixed_args_list)
         c_head_grads_array = c_array(ctypes.c_void_p, head_grads_list)
