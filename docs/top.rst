@@ -40,6 +40,8 @@ This level enables fully connected multi-layer perceptron.
    nnvm.symbol.elemwise_div
    nnvm.symbol.fill
    nnvm.symbol.fill_like
+   nnvm.symbol.ones_like
+   nnvm.symbol.zeros_like
    nnvm.symbol.flatten
    nnvm.symbol.concatenate
    nnvm.symbol.expand_dims

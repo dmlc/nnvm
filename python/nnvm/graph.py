@@ -6,6 +6,7 @@ This is a developer API that is used to manipulate and transform graphs.
 """
 from __future__ import absolute_import as _abs
 
+import sys
 import ctypes
 import json
 from ._base import _LIB
@@ -13,6 +14,7 @@ from ._base import c_array, c_str, nn_uint, py_str, string_types
 from ._base import GraphHandle, SymbolHandle
 from ._base import check_call
 from .symbol import Variable, Symbol, Group as _Group
+
 
 class GraphIndex(object):
     """Index for quickly accessing graph attributes.
@@ -253,7 +255,7 @@ def load_json(json_str):
     return ret.apply("LoadJSON")
 
 
-def create(symbol):
+def create(symbol, need_backward=False, fixed_args=None, head_grads=None):
     """Create a new graph from symbol.
 
     Parameters
@@ -261,12 +263,34 @@ def create(symbol):
     symbol : Symbol
         The symbolic graph used to create Graph object.
 
+    need_backward : boolean, optional
+        Whether to build full forward-backward graph.
+
+    fixed_args : list of string, optional
+        List of Names for arguments which don't require gradient.
+
+    head_grads : list of Symbol, optional
+        Placeholder symbol for gradient on the symbol outputs to be propagated back.
+
     Returns
     -------
     graph : Graph
         A generated new graph object.
     """
     ghandle = GraphHandle()
-    check_call(_LIB.NNGraphCreate(
-        symbol.handle, ctypes.byref(ghandle)))
+    if not need_backward:
+        check_call(_LIB.NNGraphCreate(
+            symbol.handle, ctypes.byref(ghandle)))
+    else:
+        if sys.version_info[0] < 3:
+            fixed_args_list = fixed_args or []
+        else:
+            fixed_args_list = [item.encode('utf-8') for item in fixed_args] \
+                if fixed_args else []
+        head_grads_list = [sym.handle for sym in head_grads] if head_grads else []
+        c_fixed_arg_array = c_array(ctypes.c_char_p, fixed_args_list)
+        c_head_grads_array = c_array(ctypes.c_void_p, head_grads_list)
+        check_call(_LIB.NNFullGraphCreate(
+            symbol.handle, c_fixed_arg_array, ctypes.c_uint(len(fixed_args_list)),
+            c_head_grads_array, ctypes.c_uint(len(head_grads_list)), ctypes.byref(ghandle)))
     return Graph(ghandle)

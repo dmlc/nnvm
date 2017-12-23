@@ -314,6 +314,22 @@ NNVM_DLL int NNSymbolCompose(SymbolHandle sym,
  */
 NNVM_DLL int NNGraphCreate(SymbolHandle symbol, GraphHandle *graph);
 /*!
+ * \brief create a full forward-backward graph handle from symbol
+ * \param symbol The symbol representing the graph.
+ * \param fixed_args Names of arguments which don't require gradient.
+ * \param num_fixed_args Number of arguments which don't require gradient.
+ * \param head_grads Symbol representing head gradient.
+ * \param num_head_grads Number of head gradient symbol.
+ * \param graph The graph handle created.
+ * \return 0 when success, -1 when failure happens
+ */
+NNVM_DLL int NNFullGraphCreate(SymbolHandle symbol,
+                               const char** fixed_args,
+                               const unsigned int num_fixed_args,
+                               SymbolHandle* head_grads,
+                               const unsigned int num_head_grads,
+                               GraphHandle *graph);
+/*!
  * \brief free the graph handle
  * \param handle The handle to be freed.
  */

@@ -112,6 +112,26 @@ def test_print_graph_ir():
     assert("y_bias" in ir1)
     assert("shape=" in ir2)
 
+def test_create_full_graph():
+    x = sym.Variable("x")
+    y = sym.Variable("y")
+    z1 = sym.elemwise_add(x, sym.sqrt(y))
+    z2 = sym.log(x)
+    symbol = sym.Group([z1, z2])
+    compute_graph = graph.create(symbol, need_backward=True)
+    assert(compute_graph.index.num_nodes == 11)
+
+    head_grads = [sym.Variable("g1"), sym.Variable("g2")]
+    compute_graph = graph.create(symbol, need_backward=True, head_grads=head_grads)
+    ir = compute_graph.ir()
+    assert(compute_graph.index.num_nodes == 11)
+    assert("g1" in ir)
+    assert("g2" in ir)
+
+    fixed_args = ["x"]
+    compute_graph = graph.create(symbol, need_backward=True, fixed_args=fixed_args)
+    assert(compute_graph.index.num_nodes == 8)
+
 
 if __name__ == "__main__":
     test_print_graph_ir()
@@ -123,3 +143,4 @@ if __name__ == "__main__":
     test_infer_type()
     test_plan_memory()
     test_list_args()
+    test_create_full_graph()
