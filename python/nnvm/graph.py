@@ -4,7 +4,7 @@
 
 This is a developer API that is used to manipulate and transform graphs.
 """
-from __future__ import absolute_import as _abs
+from __future__ import absolute_import as _abs, print_function
 
 import ctypes
 import json
@@ -12,7 +12,11 @@ from ._base import _LIB
 from ._base import c_array, c_str, nn_uint, py_str, string_types
 from ._base import GraphHandle, SymbolHandle
 from ._base import check_call
-from .symbol import Variable, Symbol, Group as _Group, ones_like
+from .symbol import Variable, Symbol, Group as _Group
+try:
+    from .symbol import ones_like
+except ImportError:
+    print("ones_like operator is required for creating gradient.")
 
 class GraphIndex(object):
     """Index for quickly accessing graph attributes.

@@ -124,7 +124,7 @@ def test_gradient():
     g2 = sym.Variable("g2")
     grad_ys = [g1, g2]
     gradient = graph.gradients(sym.Group([z1, z2]),
-                               sym.Group(sym.Group([x, y])), grad_ys=grad_ys)
+                               sym.Group([x, y]), grad_ys=grad_ys)
     g_graph = graph.create(sym.Group(gradient)).ir()
     assert len(gradient) == 2
     assert "g1" in g_graph
@@ -140,3 +140,4 @@ if __name__ == "__main__":
     test_infer_type()
     test_plan_memory()
     test_list_args()
+    test_gradient()
