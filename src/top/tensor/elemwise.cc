@@ -241,27 +241,27 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(copy)
 
 DMLC_REGISTER_PARAMETER(InitOpParam);
 
-// fill
-NNVM_REGISTER_INIT_OP(fill)
+// full
+NNVM_REGISTER_INIT_OP(full)
 .describe(R"code(Fill array with scalar value
 
 )code"  NNVM_ADD_FILELINE)
 .set_support_level(1);
 
-NNVM_REGISTER_INIT_OP(_zeros)
-.describe(R"code(fill target with zeros
+NNVM_REGISTER_INIT_OP(zeros)
+.describe(R"code(Fill target with zeros
 
 )code"  NNVM_ADD_FILELINE)
 .set_support_level(1);
 
-NNVM_REGISTER_INIT_OP(_ones)
-.describe(R"code(fill target with ones
+NNVM_REGISTER_INIT_OP(ones)
+.describe(R"code(Fill target with ones
 
 )code"  NNVM_ADD_FILELINE)
 .set_support_level(1);
 
-// fill_like
-NNVM_REGISTER_ELEMWISE_UNARY_OP(fill_like)
+// full_like
+NNVM_REGISTER_ELEMWISE_UNARY_OP(full_like)
   .describe(R"code(Return an scalar value array with the same shape and type
 as the input array
 
@@ -273,8 +273,8 @@ as the input array
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
     return std::vector<NodeEntry>{
-      MakeNode("fill_like", n->attrs.name + "_grad",
-               {n->inputs[0]}, {{"value", "0"}})
+      MakeNode("zeros_like", n->attrs.name + "_grad",
+               {n->inputs[0]})
     };
 });
 
