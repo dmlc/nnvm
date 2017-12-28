@@ -248,13 +248,6 @@ NNVM_REGISTER_INIT_OP(fill)
 )code"  NNVM_ADD_FILELINE)
 .set_support_level(1);
 
-// Generate constant zero
-NNVM_REGISTER_INIT_OP(__zero__)
-.describe(R"code(Return constant value zero
-
-)code"  NNVM_ADD_FILELINE)
-.set_support_level(1);
-
 NNVM_REGISTER_INIT_OP(_zeros)
 .describe(R"code(fill target with zeros
 
