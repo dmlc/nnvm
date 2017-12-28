@@ -503,7 +503,7 @@ std::vector<NodeEntry> ElementWiseSumGrad(
 }
 
 
-NNVM_REGISTER_OP(__ewise_sum__)
+NNVM_REGISTER_OP(elemwise_sum)
 .describe(R"code(Adds all input arguments element-wise.
 
 )code"  NNVM_ADD_FILELINE)
