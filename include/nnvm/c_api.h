@@ -350,7 +350,7 @@ NNVM_DLL int NNGraphSetJSONAttr(GraphHandle handle,
  *  The json_out is an array of [type_name, value].
  *  Where the type_name is a registered type string in C++ side via DMLC_JSON_ENABLE_ANY.
  * \param success Whether the result is contained in out.
- * \return 0 when success, -1 when failure happens
+ * \return 1 when success, 0 when failure happens
  */
 NNVM_DLL int NNGraphGetJSONAttr(SymbolHandle handle,
                                 const char* key,
