@@ -38,6 +38,7 @@ This level enables fully connected multi-layer perceptron.
    nnvm.symbol.elemwise_sub
    nnvm.symbol.elemwise_mul
    nnvm.symbol.elemwise_div
+   nnvm.symbol.elemwise_sum
    nnvm.symbol.full
    nnvm.symbol.full_like
    nnvm.symbol.ones
@@ -54,6 +55,9 @@ This level enables fully connected multi-layer perceptron.
    nnvm.symbol.softmax
    nnvm.symbol.log_softmax
    nnvm.symbol.pad
+   nnvm.symbol.assign
+   nnvm.symbol.make_loss
+   nnvm.symbol.block_grad
 
 
 **Level 2: Convolutions**
@@ -117,6 +121,7 @@ Detailed Definitions
 .. autofunction:: nnvm.symbol.elemwise_sub
 .. autofunction:: nnvm.symbol.elemwise_mul
 .. autofunction:: nnvm.symbol.elemwise_div
+.. autofunction:: nnvm.symbol.elemwise_sum
 .. autofunction:: nnvm.symbol.full
 .. autofunction:: nnvm.symbol.full_like
 .. autofunction:: nnvm.symbol.ones
@@ -133,6 +138,9 @@ Detailed Definitions
 .. autofunction:: nnvm.symbol.softmax
 .. autofunction:: nnvm.symbol.log_softmax
 .. autofunction:: nnvm.symbol.pad
+.. autofunction:: nnvm.symbol.assign
+.. autofunction:: nnvm.symbol.make_loss
+.. autofunction:: nnvm.symbol.block_grad
 
 .. autofunction:: nnvm.symbol.conv2d
 .. autofunction:: nnvm.symbol.conv2d_transpose

@@ -158,16 +158,35 @@ struct ReduceParam : public dmlc::Parameter<ReduceParam> {
   }
 };
 
-struct InitOpParam : public dmlc::Parameter<InitOpParam> {
+struct InitOpWithScalarParam : public dmlc::Parameter<InitOpWithScalarParam> {
   TShape shape;
   int dtype;
   double value;
+
+  DMLC_DECLARE_PARAMETER(InitOpWithScalarParam) {
+    DMLC_DECLARE_FIELD(shape).set_default(TShape());
+    DMLC_DECLARE_DTYPE_FIELD(dtype).set_default(kFloat32)
+      .describe("Target data type.");
+    DMLC_DECLARE_FIELD(value).describe("Value to fill");
+  }
+};
+
+struct InitOpParam : public dmlc::Parameter<InitOpParam> {
+  TShape shape;
+  int dtype;
 
   DMLC_DECLARE_PARAMETER(InitOpParam) {
     DMLC_DECLARE_FIELD(shape).set_default(TShape());
     DMLC_DECLARE_DTYPE_FIELD(dtype).set_default(kFloat32)
       .describe("Target data type.");
-    DMLC_DECLARE_FIELD(value).describe("Value to fill");
+  }
+};
+
+struct ElementWiseReduceParam : public dmlc::Parameter<ElementWiseReduceParam> {
+  int num_args;
+  DMLC_DECLARE_PARAMETER(ElementWiseReduceParam) {
+    DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
+      .describe("Number of inputs to be reduced.");
   }
 };
 

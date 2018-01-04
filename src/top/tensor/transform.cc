@@ -584,7 +584,14 @@ Examples::
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_support_level(4);
+.set_support_level(4)
+.set_attr<FGradient>(
+  "FGradient", [](const NodePtr& n,
+                  const std::vector<NodeEntry>& ograds) {
+    return std::vector<NodeEntry>{
+      MakeNode("transpose", n->attrs.name + "_t", {ograds[0]}, n->attrs.dict)
+    };
+});
 
 }  // namespace top
 }  // namespace nnvm

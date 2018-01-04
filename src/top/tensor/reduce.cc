@@ -100,8 +100,25 @@ inline void AxesParamParser(nnvm::NodeAttrs* attrs) {
   .set_attr<FInferType>("FInferType", ElemwiseType<1, 1>)               \
   .set_num_inputs(1)                                                    \
   .set_num_outputs(1)                                                   \
+  .set_attr<FGradient>(                                                 \
+    "FGradient", [](const NodePtr& n,                                   \
+                    const std::vector<NodeEntry>& ograds){              \
+      std::string op_name("_"); op_name += #op; op_name += "_grad";     \
+      return MakeGradNode(op_name.c_str(), n,                           \
+                          {ograds[0], n->inputs[0]},                    \
+                          n->attrs.dict);                               \
+  })
 
-
+#define NNVM_REGISTER_REDUCE_OP_GRAD(op)                                \
+  NNVM_REGISTER_OP(op)                                                  \
+  .add_argument("ograd", "Tensor", "Output grad")                       \
+  .add_argument("input", "Tensor", "Input data")                        \
+  .set_attr_parser(AxesParamParser<ReduceParam>)                        \
+  .set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<ReduceParam>) \
+  .set_attr<FInferShape>("FInferShape", AssignOutputAttr<TShape, 1, 0>) \
+  .set_attr<FInferType>("FInferType", ElemwiseType<2, 1>)               \
+  .set_num_inputs(2)                                                    \
+  .set_num_outputs(1)
 
 NNVM_REGISTER_REDUCE_OP(sum)
 .describe(R"code(Computes the sum of array elements over given axes.
@@ -119,6 +136,12 @@ Example::
 
   sum(data, axis=[1,2])
   [ 12.  19.  27.]
+
+)code" NNVM_ADD_FILELINE)
+;
+
+NNVM_REGISTER_REDUCE_OP_GRAD(_sum_grad)
+.describe(R"code(Computes sum grad.
 
 )code" NNVM_ADD_FILELINE);
 

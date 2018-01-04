@@ -241,73 +241,61 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(copy)
 });
 
 DMLC_REGISTER_PARAMETER(InitOpParam);
+DMLC_REGISTER_PARAMETER(InitOpWithScalarParam);
 
 // full
 NNVM_REGISTER_INIT_OP(full)
 .describe(R"code(Fill array with scalar value
 
 )code"  NNVM_ADD_FILELINE)
-.set_support_level(1);
+.set_support_level(1)
+.set_attr_parser(ParamParser<InitOpWithScalarParam>)
+.set_attr<FGetAttrDict>(
+  "FGetAttrDict", ParamGetAttrDict<InitOpWithScalarParam>)
+.add_arguments(InitOpWithScalarParam::__FIELDS__());
 
 NNVM_REGISTER_INIT_OP(zeros)
 .describe(R"code(Fill target with zeros
 
 )code"  NNVM_ADD_FILELINE)
+.set_attr_parser(ParamParser<InitOpParam>)
+.set_attr<FGetAttrDict>(
+  "FGetAttrDict", ParamGetAttrDict<InitOpParam>)
 .set_support_level(1);
 
 NNVM_REGISTER_INIT_OP(ones)
 .describe(R"code(Fill target with ones
 
 )code"  NNVM_ADD_FILELINE)
+.set_attr_parser(ParamParser<InitOpParam>)
+.set_attr<FGetAttrDict>(
+  "FGetAttrDict", ParamGetAttrDict<InitOpParam>)
 .set_support_level(1);
 
 // full_like
-NNVM_REGISTER_ELEMWISE_UNARY_OP(full_like)
-  .describe(R"code(Return an scalar value array with the same shape and type
+NNVM_REGISTER_INIT_LIKE_OP(full_like)
+.describe(R"code(Return an scalar value array with the same shape and type
 as the input array
 
 )code"  NNVM_ADD_FILELINE)
 .set_support_level(1)
-.add_arguments(InitOpParam::__FIELDS__())
-.set_attr_parser(ParamParser<InitOpParam>)
-.set_attr<FGradient>(
-  "FGradient", [](const NodePtr& n,
-                  const std::vector<NodeEntry>& ograds){
-    return std::vector<NodeEntry>{
-      MakeNode("zeros_like", n->attrs.name + "_grad",
-               {n->inputs[0]})
-    };
-});
+.add_arguments(ScalarParam::__FIELDS__())
+.set_attr_parser(ParamParser<ScalarParam>)
+.set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<ScalarParam>);
 
-NNVM_REGISTER_ELEMWISE_UNARY_OP(zeros_like)
+NNVM_REGISTER_INIT_LIKE_OP(zeros_like)
 .describe(R"code(Return an array of zeros with the same shape and type
 as the input array.
 
 )code")
-.add_argument("data", "Symbol", "The input")
-.set_attr<FGradient>(
-  "FGradient", [](const NodePtr& n,
-                  const std::vector<NodeEntry>& ograds){
-    return std::vector<NodeEntry>{
-      MakeNode("zeros_like", n->attrs.name + "_grad",
-               {n->inputs[0]})
-    };
-});
+.set_support_level(1);
 
-NNVM_REGISTER_ELEMWISE_UNARY_OP(ones_like)
+NNVM_REGISTER_INIT_LIKE_OP(ones_like)
 .describe(R"code(Return an array of ones with the same shape and type
 as the input array.
 
 )code")
-.add_argument("data", "Symbol", "The input")
-.set_attr<FGradient>(
-  "FGradient", [](const NodePtr& n,
-                  const std::vector<NodeEntry>& ograds){
-    return std::vector<NodeEntry>{
-      MakeNode("zeros_like", n->attrs.name + "_grad",
-               {n->inputs[0]})
-    };
-});
+.set_support_level(1);
 
 // unary scalar op
 DMLC_REGISTER_PARAMETER(ScalarParam);
@@ -452,64 +440,64 @@ NNVM_REGISTER_ELEMWISE_BINARY_SCALAR(__rpow_scalar__)
     };
 });
 
+DMLC_REGISTER_PARAMETER(ElementWiseReduceParam);
 
-struct ElementWiseSumParam : public dmlc::Parameter<ElementWiseSumParam> {
-  int num_args;
-  DMLC_DECLARE_PARAMETER(ElementWiseSumParam) {
-    DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
-      .describe("Number of inputs to be summed.");
-  }
-};
-
-DMLC_REGISTER_PARAMETER(ElementWiseSumParam);
-
-bool ElementWiseSumShape(const NodeAttrs& attrs,
-                         std::vector<TShape> *in_attrs,
-                         std::vector<TShape> *out_attrs) {
-  CHECK_EQ(out_attrs->size(), 1);
-  return ElemwiseAttr<TShape, shape_is_none, shape_assign, true, shape_string>(
-    attrs, in_attrs, out_attrs, TShape());
-}
-
-bool ElementWiseSumType(const NodeAttrs& attrs,
-                        std::vector<int> *in_attrs,
-                        std::vector<int> *out_attrs) {
-  CHECK_EQ(out_attrs->size(), 1);
-  return ElemwiseAttr<int, type_is_none, type_assign, true, type_string>(
-    attrs, in_attrs, out_attrs, -1);
-}
-
-std::vector<NodeEntry> ElementWiseSumGrad(
-    const NodePtr& n,
-    const std::vector<NodeEntry>& ograds) {
-  // identity constraints in the beginning for easier shape inference.
-  const Op* copy_op = Op::Get("identity");
-  CHECK_EQ(ograds.size(), 1);
-  std::vector<NodeEntry> ret;
-  NodeEntry n_out{n, 0, 0};
-  for (size_t i = 0; i < n->inputs.size(); i++) {
-    NodePtr id_node = Node::Create();
-    id_node->attrs.op = copy_op;
-    id_node->inputs = {ograds[0]};
-    ret.push_back(NodeEntry{id_node, 0, 0});
-  }
-  return ret;
-}
-
-
-NNVM_REGISTER_OP(elemwise_sum)
+NNVM_REGISTER_ELEMWISE_REDUCE_OP(elemwise_sum)
 .describe(R"code(Adds all input arguments element-wise.
 
 )code"  NNVM_ADD_FILELINE)
-.set_attr_parser(ParamParser<ElementWiseSumParam>)
-.set_num_inputs([](const NodeAttrs& attrs) {
-  uint32_t ret = dmlc::get<ElementWiseSumParam>(attrs.parsed).num_args;
-  return ret;
+.set_attr<nnvm::FGradient>(
+  "FGradient", [](const NodePtr& n,
+                  const std::vector<NodeEntry>& ograds){
+    CHECK_EQ(ograds.size(), 1);
+    std::vector<NodeEntry> ret;
+    for (size_t i = 0; i < n->inputs.size(); i++) {
+      ret.push_back(ograds[0]);
+    }
+    return ret;
+  });
+
+NNVM_REGISTER_ELEMWISE_UNARY_OP(make_loss)
+  .describe(R"code(Make your own loss function in network construction.
+
+This operator accepts a customized loss function symbol as a terminal loss and
+the symbol should be an operator with no backward dependency.
+The output of this function is the gradient of loss with respect to the input data.
+
+For example, if you are a making a cross entropy loss function. Assume ``out`` is the
+predicted output and ``label`` is the true label, then the cross entropy can be defined as::
+
+  cross_entropy = label * log(out) + (1 - label) * log(1 - out)
+  loss = make_loss(cross_entropy)
+
+We will need to use ``make_loss`` when we are creating our own loss function.
+)code" NNVM_ADD_FILELINE)
+.set_attr<FListOutputNames>(
+  "FListOutputNames", [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"loss"};
 })
-.set_attr<nnvm::FInferShape>("FInferShape", ElementWiseSumShape)
-.set_attr<nnvm::FInferType>("FInferType", ElementWiseSumType)
-.set_attr<nnvm::FGradient>("FGradient", ElementWiseSumGrad)
-.add_argument("args", "Symbol[]", "Positional input arguments");
+.set_attr<FInplaceIdentity>(
+  "FInplaceIdentity", [](const NodeAttrs& attrs){
+    return std::vector<bool>{true};
+})
+.set_attr<FGradient>(
+  "FGradient", [](const NodePtr& n,
+                  const std::vector<NodeEntry>& ograds) {
+    CHECK(n->inputs.size() == 1) << "make_loss should only take one input";
+    return std::vector<NodeEntry>{
+      MakeNode("ones_like", n->attrs.name + "_head_grads", n->inputs)
+    };
+});
+
+NNVM_REGISTER_ELEMWISE_UNARY_OP(block_grad)
+.describe(R"code(Blocks gradient computation for input.
+
+)code" NNVM_ADD_FILELINE)
+.set_attr<nnvm::FInplaceIdentity>(
+  "FInplaceIdentity", [](const NodeAttrs& attrs){
+    return std::vector<bool>{true};
+})
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 }  // namespace top
 }  // namespace nnvm

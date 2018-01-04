@@ -288,9 +288,8 @@ def gradients(ys, xs, grad_ys=None):
 
     Returns
     -------
-    ret : list of Symbol
-        Generated gradient symbol. For each xs,
-        all gradients from ys are merged into a single symbol.
+    ret : Graph
+        Generated gradient graph.
     """
     if isinstance(ys, list):
         ys = _Group(ys)
@@ -301,8 +300,4 @@ def gradients(ys, xs, grad_ys=None):
     if grad_ys is None:
         grad_ys = [ones_like(ys[i]) for i in range(ny)]
     g._set_symbol_list_attr('grad_ys_out_grad', grad_ys)
-    sym = g.apply('Gradient').symbol
-    nx = len(_Group(xs).list_output_names()) \
-        if isinstance(xs, list) else len(xs.list_output_names())
-    ret = [sym[i] for i in range(nx)]
-    return ret
+    return g.apply('Gradient')

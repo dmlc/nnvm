@@ -54,7 +54,7 @@ NNVM_REGISTER_OP(dense)
 - **data**: `(x1, x2, ..., xn, input_dim)`
 - **weight**: `(units, input_dim)`
 - **bias**: `(units,)`
-- **out**: `(x1, x2, ..., xn, num_hidden)`
+- **out**: `(x1, x2, ..., xn, units)`
 
 The learnable parameters include both ``weight`` and ``bias``.
 
@@ -72,7 +72,43 @@ If ``use_bias`` is set to be false, then the ``bias`` term is ignored.
 .set_attr<FListInputNames>("FListInputNames", UseBiasListInputNames<DenseParam>)
 .set_attr<FInferShape>("FInferShape", DenseInferShape)
 .set_attr<FInferType>("FInferType", ElemwiseType<-1, 1>)
+.set_attr<FGradient>(
+  "FGradient", [](const NodePtr& n,
+                  const std::vector<NodeEntry>& ograds) {
+    return MakeGradNode("_dense_grad", n,
+                        {ograds[0],n->inputs[DenseParam::kData],
+                         n->inputs[DenseParam::kWeight]},
+                        n->attrs.dict);
+})
 .set_support_level(1);
+
+NNVM_REGISTER_OP(_dense_grad)
+  .describe(R"code(Dense operator grad.
+
+)code" NNVM_ADD_FILELINE)
+.add_argument("ograd", "Tensor", "Output data.")
+.add_argument("data", "Tensor", "Input data")
+.add_argument("weight", "Tensor", "Input weight.")
+.set_num_inputs(3)
+.set_num_outputs(UseBiasNumInputs<DenseParam>)
+.set_attr<FListOutputNames>("FListOutputNames", UseBiasListInputNames<DenseParam>)
+.set_attr_parser(ParamParser<DenseParam>)
+.set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<DenseParam>)
+.set_attr<FInferShape>(
+  "FInferShape", [](const nnvm::NodeAttrs& attrs,
+                    std::vector<TShape>* in_attrs,
+                    std::vector<TShape>* out_attrs) {
+    const DenseParam& param = nnvm::get<DenseParam>(attrs.parsed);
+
+    NNVM_ASSIGN_OUTPUT_SHAPE(attrs, *out_attrs, DenseParam::kData, in_attrs->at(1));
+    NNVM_ASSIGN_OUTPUT_SHAPE(attrs, *out_attrs, DenseParam::kWeight, in_attrs->at(2));
+    if (param.use_bias) {
+      NNVM_ASSIGN_OUTPUT_SHAPE(attrs, *out_attrs, DenseParam::kBias, TShape({param.units}));
+    }
+    return true;
+})
+.set_attr<FInferType>("FInferType", ElemwiseType<3, -1>)
+.set_attr<TIsBackward>("TIsBackward", true);
 
 // relu
 NNVM_REGISTER_ELEMWISE_UNARY_OP(relu)
@@ -82,7 +118,22 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(relu)
    max(input, 0)
 
 )code" NNVM_ADD_FILELINE)
+.set_attr<FGradient>(
+  "FGradient", [](const NodePtr& n,
+                  const std::vector<NodeEntry>& ograds) {
+    return MakeGradNode("_relu_grad", n,
+                        {ograds[0], n->inputs[0]});
+})
 .set_support_level(1);
+
+NNVM_REGISTER_OP(_relu_grad)
+.add_argument("ograd", "Tensor", "Output grad.")
+.add_argument("intput", "Tensor", "Input data of relu.")
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<FInferShape>("FInferShape", ElemwiseShape<2, 1>)
+.set_attr<FInferType>("FInferType", ElemwiseType<2, 1>)
+.set_attr<TIsBackward>("TIsBackward", true);
 
 // dropout
 DMLC_REGISTER_PARAMETER(DropoutParam);
@@ -217,7 +268,29 @@ NNVM_REGISTER_OP(softmax)
 .set_num_outputs(1)
 .set_attr<FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_support_level(1);
+.set_support_level(1)
+.set_attr<FGradient>(
+  "FGradient", [](const NodePtr& n,
+                  const std::vector<NodeEntry>& ograds) {
+    return MakeGradNode("_softmax_grad", n,
+                        {ograds[0], NodeEntry{n, 0, 0}},
+                        n->attrs.dict);
+});
+
+// softmax grad
+NNVM_REGISTER_OP(_softmax_grad)
+  .describe(R"code(Computes softmax grad.
+
+)code" NNVM_ADD_FILELINE)
+.add_argument("ograd", "Tensor", "Output grad.")
+.add_argument("output", "Tensor", "Output data of softmax.")
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<SoftmaxParam>)
+.set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<SoftmaxParam>)
+.set_attr<FInferShape>("FInferShape", ElemwiseShape<2, 1>)
+.set_attr<FInferType>("FInferType", ElemwiseType<2, 1>)
+.set_attr<TIsBackward>("TIsBackward", true);
 
 // log_softmax
 NNVM_REGISTER_OP(log_softmax)

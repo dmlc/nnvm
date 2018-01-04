@@ -84,6 +84,32 @@ class Tuple {
     std::copy(begin, end, this->begin());
   }
   /*!
+   * \brief Assign content to tuple from iterator.
+   * \param begin the beginning of iterator
+   * \param end the end of the iterator
+   * \param d_first the beginning of the destination range
+   * \tparam RandomAccessIterator iterator type
+   */
+  template<typename RandomAccessIterator>
+  inline void assign(RandomAccessIterator begin,
+                     RandomAccessIterator end,
+                     ValueType* d_first) {
+    // copy existing data
+    Tuple temp(this->begin(), d_first);
+
+    // allocate new data
+    uint32_t offset = d_first - this->begin();
+    CHECK_LE(d_first, this->end())
+      << "Destination is invalid";
+    if (offset + (end - begin) > ndim_) {
+      this->SetDim(ndim_ + end - begin);
+    }
+
+    // fill with existing and new data
+    std::copy(temp.begin(), temp.end(), this->begin());
+    std::copy(begin, end, this->begin() + offset);
+  }
+  /*!
    * \brief Swap current object with other
    * \param other another object to be swapped.
    */
