@@ -32,7 +32,12 @@ inline bool UpSamplingInferShape(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(upsampling)
-.describe("TODO doc" NNVM_ADD_FILELINE)
+.describe(R"(Perform nearest neighbor upsampling to input array.
+
+- **data**: Input is 4D array of shape (batch_size, channels, in_height, in_width).
+- **out**: Output is 4D array of shape (batch_size, channels, in_height*scale, in_width*scale).
+
+)" NNVM_ADD_FILELINE)
 .add_argument("data", "4D Tensor", "Input data.")
 .add_arguments(UpSamplingParam::__FIELDS__())
 .set_attr_parser(ParamParser<UpSamplingParam>)
