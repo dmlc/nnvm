@@ -156,22 +156,16 @@ def test_upsampling():
     dshape = (1, 16, 32, 32)
     oshape = (1, 16, 32*scale, 32*scale)
     shape_dict = {"x": dshape}
-    target = "llvm"
-    graph, lib, _ = nnvm.compiler.build(y, target, shape_dict)
-    ctx = tvm.context(target, 0)
-    m = graph_runtime.create(graph, lib, ctx)
-    a_np = np.random.uniform(size=dshape).astype(dtype)
-    data = tvm.nd.array(a_np)
-    m.run(x=data)
-    out = m.get_output(0, tvm.nd.empty(oshape, dtype))
+    for target, ctx in ctx_list():
+        graph, lib, _ = nnvm.compiler.build(y, target, shape_dict)
+        m = graph_runtime.create(graph, lib, ctx)
+        a_np = np.random.uniform(size=dshape).astype(dtype)
+        data = tvm.nd.array(a_np)
+        m.run(x=data)
+        out = m.get_output(0, tvm.nd.empty(oshape, dtype))
+        b_np = topi.testing.upsampling_python(a_np, scale)
+        np.testing.assert_allclose(out.asnumpy(), b_np, rtol=1e-5)
 
-    from skimage.transform import resize
-    b_np = np.zeros(oshape, dtype=dtype)
-    for b in range(oshape[0]):
-        for c in range(oshape[1]):
-            b_np[b,c,:,:] = resize(a_np[b,c,:,:] , (oshape[2], oshape[3]), order=0, mode="reflect")
-    print("Diff:", np.sum(np.abs(out.asnumpy() - b_np)))
-    np.testing.assert_allclose(out.asnumpy(), b_np, rtol=1e-5)
 
 if __name__ == "__main__":
     test_conv2d()
