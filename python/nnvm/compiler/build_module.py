@@ -101,7 +101,7 @@ def _lower(sch, inputs, func_name, graph):
     try:
         f = tvm.lower(sch, inputs, name=func_name)
         logging.debug("lower function %s", func_name)
-        logging.debug(tvm.lower(sch, inputs, simple_mode=True))
+        logging.debug("%s", tvm.lower(sch, inputs, simple_mode=True))
     except Exception:
         msg = traceback.format_exc()
         msg += "Error during compile graph\n"
