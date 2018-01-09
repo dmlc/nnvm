@@ -22,7 +22,7 @@
 #define NNVM_DLL __declspec(dllimport)
 #endif
 #else
-#define NNVM_DLL NNVM_EXTERN_C
+#define NNVM_DLL
 #endif
 
 /*! \brief manually define unsigned int */
