@@ -94,7 +94,7 @@ struct NodeAttrs {
 /*!
  * \brief Node represents an operation in a computation graph.
  */
-class Node {
+class NNVM_API Node {
  public:
   /*! \brief The attributes in the node. */
   NodeAttrs attrs;

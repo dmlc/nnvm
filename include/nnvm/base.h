@@ -32,4 +32,15 @@ using dmlc::get;
 #define NNVM_STRINGIZE(x) NNVM_STRINGIZE_DETAIL(x)
 #define NNVM_DESCRIBE(...) describe(__VA_ARGS__ "\n\nFrom:" __FILE__ ":" NNVM_STRINGIZE(__LINE__))
 #define NNVM_ADD_FILELINE "\n\nDefined in " __FILE__ ":L" NNVM_STRINGIZE(__LINE__)
+
+#ifdef _MSC_VER
+#ifdef NNVM_EXPORTS
+#define NNVM_API __declspec(dllexport)
+#else
+#define NNVM_API __declspec(dllimport)
+#endif
+#else
+#define NNVM_DLL 
+#endif
+
 #endif  // NNVM_BASE_H_
