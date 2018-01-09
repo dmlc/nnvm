@@ -40,7 +40,7 @@ using dmlc::get;
 #define NNVM_API __declspec(dllimport)
 #endif
 #else
-#define NNVM_DLL 
+#define NNVM_API
 #endif
 
 #endif  // NNVM_BASE_H_
