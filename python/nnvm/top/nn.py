@@ -262,6 +262,6 @@ def compute_upsampling(attrs, inputs, _):
 def schedule_upsampling(_, outs, target):
     """Compute definition of upsampling"""
     with tvm.target.create(target):
-        return topi.generic.schedule_upsampling(outs)
+        return topi.generic.schedule_injective(outs)
 
 reg.register_pattern("upsampling", OpPattern.OUT_ELEMWISE_FUSABLE)
