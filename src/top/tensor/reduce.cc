@@ -137,8 +137,7 @@ Example::
   sum(data, axis=[1,2])
   [ 12.  19.  27.]
 
-)code" NNVM_ADD_FILELINE)
-;
+)code" NNVM_ADD_FILELINE);
 
 NNVM_REGISTER_REDUCE_OP_GRAD(_sum_grad)
 .describe(R"code(Computes sum grad.

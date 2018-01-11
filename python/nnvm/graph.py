@@ -13,7 +13,6 @@ from ._base import c_array, c_str, nn_uint, py_str, string_types
 from ._base import GraphHandle, SymbolHandle
 from ._base import check_call
 from .symbol import Variable, Symbol, Group as _Group
-from .symbol import ones_like
 
 class GraphIndex(object):
     """Index for quickly accessing graph attributes.
