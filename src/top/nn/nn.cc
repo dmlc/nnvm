@@ -76,7 +76,7 @@ If ``use_bias`` is set to be false, then the ``bias`` term is ignored.
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds) {
     return MakeGradNode("_dense_grad", n,
-                        {ograds[0],n->inputs[DenseParam::kData],
+                        {ograds[0], n->inputs[DenseParam::kData],
                          n->inputs[DenseParam::kWeight]},
                         n->attrs.dict);
 })

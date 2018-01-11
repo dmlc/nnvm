@@ -116,10 +116,7 @@ inline bool ElementWiseReduceType(const NodeAttrs& attrs,
 #define NNVM_REGISTER_INIT_OP(name)                                 \
   NNVM_REGISTER_OP(name)                                            \
   .set_num_inputs(0)                                                \
-  .set_num_outputs(1)                                               \
-  .set_attr<FInferShape>("FInferShape", ZeroShape)                  \
-  .set_attr<FInferType>("FInferType", ZeroType)                     \
-  .add_arguments(InitOpParam::__FIELDS__())
+  .set_num_outputs(1)
 
 
 #define NNVM_REGISTER_INIT_LIKE_OP(name)                            \

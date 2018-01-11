@@ -271,33 +271,3 @@ def create(symbol):
     check_call(_LIB.NNGraphCreate(
         symbol.handle, ctypes.byref(ghandle)))
     return Graph(ghandle)
-
-
-def gradients(ys, xs, grad_ys=None):
-    """Create gradient symbol of ys respect to xs.
-
-    Parameters
-    ----------
-    ys : Symbol or list of Symbol
-        Symbols from which the gradient is calculated.
-    xs : Symbol or list of Symbol
-        Symbols the gradient respect to.
-        For group symbol, gradients for all outputs will be calculated.
-    grad_ys : Symbol or list of Symbol
-        Head gradients for ys.
-
-    Returns
-    -------
-    ret : Graph
-        Generated gradient graph.
-    """
-    if isinstance(ys, list):
-        ys = _Group(ys)
-    g = create(ys)
-    g._set_symbol_list_attr('grad_ys', ys)
-    g._set_symbol_list_attr('grad_xs', xs)
-    ny = len(ys.list_output_names())
-    if grad_ys is None:
-        grad_ys = [ones_like(ys[i]) for i in range(ny)]
-    g._set_symbol_list_attr('grad_ys_out_grad', grad_ys)
-    return g.apply('Gradient')

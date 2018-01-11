@@ -161,13 +161,13 @@ struct ReduceParam : public dmlc::Parameter<ReduceParam> {
 struct InitOpWithScalarParam : public dmlc::Parameter<InitOpWithScalarParam> {
   TShape shape;
   int dtype;
-  double value;
+  double scalar;
 
   DMLC_DECLARE_PARAMETER(InitOpWithScalarParam) {
     DMLC_DECLARE_FIELD(shape).set_default(TShape());
     DMLC_DECLARE_DTYPE_FIELD(dtype).set_default(kFloat32)
       .describe("Target data type.");
-    DMLC_DECLARE_FIELD(value).describe("Value to fill");
+    DMLC_DECLARE_FIELD(scalar).describe("Scalar value to fill");
   }
 };
 

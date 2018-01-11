@@ -44,7 +44,7 @@ Example::
         [4,5,6],
         [7,8,9]
     ],
-    [    [1,2,3],
+    [   [1,2,3],
         [4,5,6],
         [7,8,9]
     ]],
@@ -58,7 +58,26 @@ Example::
 .set_attr<FInferShape>("FInferShape", FlattenInferShape)
 .set_attr<FInferType>("FInferType", ElemwiseType<1, 1>)
 .add_argument("data", "Tensor", "Input data.")
+.set_attr<FGradient>(
+  "FGradient", [](const NodePtr& n,
+                  const std::vector<NodeEntry>& ograds){
+    return MakeGradNode("_flatten_grad", n,
+                        {ograds[0], n->inputs[0]});
+})
 .set_support_level(1);
+
+NNVM_REGISTER_OP(_flatten_grad)
+.describe(R"code(flattens operator grad.
+)code" NNVM_ADD_FILELINE)
+.add_argument("ograd", "4D Tensor", "Output grad.")
+.add_argument("data", "4D Tensor", "Input data of flatten.")
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<FInferShape>(
+  "FInferShape", AssignOutputAttr<TShape, 1, 0>)
+.set_attr<FInferType>("FInferType", ElemwiseType<2, 1>)
+.set_attr<TIsBackward>("TIsBackward", true);
+
 
 // concatenate
 DMLC_REGISTER_PARAMETER(ConcatenateParam);

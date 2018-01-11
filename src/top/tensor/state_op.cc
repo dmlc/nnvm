@@ -18,6 +18,7 @@ NNVM_REGISTER_OP(assign)
 
 It is also helpful when we want to update tensor inplace
 without introducing explicit circle in computation graph.
+
 )doc" NNVM_ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)

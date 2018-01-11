@@ -28,7 +28,7 @@ inline bool Conv2DInferShape(const nnvm::NodeAttrs& attrs,
   }
   CHECK_EQ(out_shape->size(), 1U);
 
-  TShape& dshape = in_shape->at(0);
+  TShape dshape = in_shape->at(0);
   if (dshape.ndim() == 0) return false;
   dshape = ConvertLayout(dshape, param.layout, kNCHW);
 
@@ -126,7 +126,7 @@ a bias vector is created and added to the outputs.
                   const std::vector<NodeEntry>& ograds) {
     return MakeGradNode("_conv2d_grad", n,
                         {ograds[0], n->inputs[Conv2DParam::kData],
-                         n->inputs[Conv2DParam::kWeight], NodeEntry{n, 0, 0}},
+                         n->inputs[Conv2DParam::kWeight]},
                         n->attrs.dict);
 });
 
@@ -137,8 +137,10 @@ NNVM_REGISTER_OP(_conv2d_grad)
 .add_argument("ograd", "4D Tensor", "Output grad.")
 .add_argument("data", "4D Tensor", "Input data of conv2d.")
 .add_argument("weight", "4D Tensor", "Input weight.")
+.set_num_inputs(3)
 .set_num_outputs(UseBiasNumInputs<Conv2DParam>)
 .set_attr<FListOutputNames>("FListOutputNames", UseBiasListInputNames<Conv2DParam>)
+.set_attr_parser(ParamParser<Conv2DParam>)
 .set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<Conv2DParam>)
 .set_attr<FInferShape>(
   "FInferShape", [](const nnvm::NodeAttrs& attrs,

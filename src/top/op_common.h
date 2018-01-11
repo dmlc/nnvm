@@ -240,10 +240,11 @@ inline bool SameShape(const NodeAttrs& attrs,
 }
 
 // return shape from node attrs
+template<typename PType>
 inline bool ZeroShape(const NodeAttrs& attrs,
                       std::vector<TShape> *ishape,
                       std::vector<TShape> *oshape) {
-  const TShape& ts = dmlc::get<InitOpParam>(attrs.parsed).shape;
+  const TShape& ts = dmlc::get<PType>(attrs.parsed).shape;
   if (ts.ndim() != 0) {
     SHAPE_ASSIGN(oshape->at(0), ts);
     return true;
@@ -265,10 +266,11 @@ inline bool AssignOutputAttr(const NodeAttrs& attrs,
 }
 
 // return type from node attrs
+template<typename PType>
 inline bool ZeroType(const NodeAttrs& attrs,
                      std::vector<int> *iattr,
                      std::vector<int> *oattr) {
-  int dtype = dmlc::get<InitOpParam>(attrs.parsed).dtype;
+  int dtype = dmlc::get<PType>(attrs.parsed).dtype;
   DTYPE_ASSIGN(oattr->at(0), dtype);
   return true;
 }

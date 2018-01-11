@@ -248,11 +248,13 @@ NNVM_REGISTER_INIT_OP(full)
 .describe(R"code(Fill array with scalar value
 
 )code"  NNVM_ADD_FILELINE)
-.set_support_level(1)
 .set_attr_parser(ParamParser<InitOpWithScalarParam>)
 .set_attr<FGetAttrDict>(
   "FGetAttrDict", ParamGetAttrDict<InitOpWithScalarParam>)
-.add_arguments(InitOpWithScalarParam::__FIELDS__());
+.add_arguments(InitOpWithScalarParam::__FIELDS__())
+.set_attr<FInferShape>("FInferShape", ZeroShape<InitOpWithScalarParam>)
+.set_attr<FInferType>("FInferType", ZeroType<InitOpWithScalarParam>)
+.set_support_level(1);
 
 NNVM_REGISTER_INIT_OP(zeros)
 .describe(R"code(Fill target with zeros
@@ -261,6 +263,9 @@ NNVM_REGISTER_INIT_OP(zeros)
 .set_attr_parser(ParamParser<InitOpParam>)
 .set_attr<FGetAttrDict>(
   "FGetAttrDict", ParamGetAttrDict<InitOpParam>)
+.add_arguments(InitOpParam::__FIELDS__())
+.set_attr<FInferShape>("FInferShape", ZeroShape<InitOpParam>)
+.set_attr<FInferType>("FInferType", ZeroType<InitOpParam>)
 .set_support_level(1);
 
 NNVM_REGISTER_INIT_OP(ones)
@@ -270,6 +275,9 @@ NNVM_REGISTER_INIT_OP(ones)
 .set_attr_parser(ParamParser<InitOpParam>)
 .set_attr<FGetAttrDict>(
   "FGetAttrDict", ParamGetAttrDict<InitOpParam>)
+.add_arguments(InitOpParam::__FIELDS__())
+.set_attr<FInferShape>("FInferShape", ZeroShape<InitOpParam>)
+.set_attr<FInferType>("FInferType", ZeroType<InitOpParam>)
 .set_support_level(1);
 
 // full_like
@@ -278,10 +286,10 @@ NNVM_REGISTER_INIT_LIKE_OP(full_like)
 as the input array
 
 )code"  NNVM_ADD_FILELINE)
-.set_support_level(1)
 .add_arguments(ScalarParam::__FIELDS__())
 .set_attr_parser(ParamParser<ScalarParam>)
-.set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<ScalarParam>);
+.set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<ScalarParam>)
+.set_support_level(1);
 
 NNVM_REGISTER_INIT_LIKE_OP(zeros_like)
 .describe(R"code(Return an array of zeros with the same shape and type
@@ -458,7 +466,7 @@ NNVM_REGISTER_ELEMWISE_REDUCE_OP(elemwise_sum)
   });
 
 NNVM_REGISTER_ELEMWISE_UNARY_OP(make_loss)
-  .describe(R"code(Make your own loss function in network construction.
+.describe(R"code(Make your own loss function in network construction.
 
 This operator accepts a customized loss function symbol as a terminal loss and
 the symbol should be an operator with no backward dependency.
@@ -471,6 +479,7 @@ predicted output and ``label`` is the true label, then the cross entropy can be 
   loss = make_loss(cross_entropy)
 
 We will need to use ``make_loss`` when we are creating our own loss function.
+
 )code" NNVM_ADD_FILELINE)
 .set_attr<FListOutputNames>(
   "FListOutputNames", [](const NodeAttrs& attrs) {
