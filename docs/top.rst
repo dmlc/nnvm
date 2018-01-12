@@ -28,6 +28,7 @@ This level enables fully connected multi-layer perceptron.
    :nosignatures:
 
    nnvm.symbol.dense
+   nnvm.symbol.dot
    nnvm.symbol.relu
    nnvm.symbol.tanh
    nnvm.symbol.sigmoid
@@ -55,9 +56,8 @@ This level enables fully connected multi-layer perceptron.
    nnvm.symbol.softmax
    nnvm.symbol.log_softmax
    nnvm.symbol.pad
-   nnvm.symbol.assign
-   nnvm.symbol.make_loss
    nnvm.symbol.block_grad
+   nnvm.symbol.indicator
 
 
 **Level 2: Convolutions**
@@ -81,6 +81,8 @@ This level enables typical convnet models.
    :nosignatures:
 
    nnvm.symbol.reshape
+   nnvm.symbol.reshape_like
+   nnvm.symbol.expand_like
    nnvm.symbol.copy
    nnvm.symbol.negative
    nnvm.symbol.leaky_relu
@@ -111,6 +113,7 @@ This level enables typical convnet models.
 Detailed Definitions
 --------------------
 .. autofunction:: nnvm.symbol.dense
+.. autofunction:: nnvm.symbol.dot
 .. autofunction:: nnvm.symbol.relu
 .. autofunction:: nnvm.symbol.tanh
 .. autofunction:: nnvm.symbol.sigmoid
@@ -138,9 +141,8 @@ Detailed Definitions
 .. autofunction:: nnvm.symbol.softmax
 .. autofunction:: nnvm.symbol.log_softmax
 .. autofunction:: nnvm.symbol.pad
-.. autofunction:: nnvm.symbol.assign
-.. autofunction:: nnvm.symbol.make_loss
 .. autofunction:: nnvm.symbol.block_grad
+.. autofunction:: nnvm.symbol.indicator
 
 .. autofunction:: nnvm.symbol.conv2d
 .. autofunction:: nnvm.symbol.conv2d_transpose
@@ -150,6 +152,8 @@ Detailed Definitions
 .. autofunction:: nnvm.symbol.global_avg_pool2d
 
 .. autofunction:: nnvm.symbol.reshape
+.. autofunction:: nnvm.symbol.reshape_like
+.. autofunction:: nnvm.symbol.expand_like
 .. autofunction:: nnvm.symbol.copy
 .. autofunction:: nnvm.symbol.negative
 .. autofunction:: nnvm.symbol.leaky_relu

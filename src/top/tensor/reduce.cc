@@ -31,11 +31,19 @@ inline TShape ReduceShapeImpl(const TShape& ishape,
     << "Reduction axis " << axis[axis.ndim() - 1]
     << " Exceeds input dimensions " << ishape;
 
+  TShape in_axis = axis;
+  for (auto& i : in_axis) {
+    i = i < 0 ? i + ishape.ndim(): i;
+    CHECK_GE(i, 0) << "axis out of bounds in reduce operator";
+    CHECK_LT(i, ishape.ndim()) << "axis out of bounds in reduce operator";
+  }
+  std::sort(in_axis.begin(), in_axis.end());
+
   if (keepdims) {
     TShape oshape(ishape);
     if (exclude) {
       for (dim_t i = 0, j = 0; i < ishape.ndim(); ++i) {
-        if (j < axis.ndim() && i == axis[j]) {
+        if (j < in_axis.ndim() && i == in_axis[j]) {
           ++j;
           continue;
         }
@@ -44,22 +52,22 @@ inline TShape ReduceShapeImpl(const TShape& ishape,
       return oshape;
     }
 
-    for (dim_t i = 0; i < axis.ndim(); ++i) {
-      oshape[axis[i]] = 1;
+    for (dim_t i = 0; i < in_axis.ndim(); ++i) {
+      oshape[in_axis[i]] = 1;
     }
     return oshape;
   }
 
   if (exclude) {
-    TShape oshape = TShape(axis.ndim());
-    for (dim_t i = 0; i < axis.ndim(); ++i) {
-      oshape[i] = ishape[axis[i]];
+    TShape oshape = TShape(in_axis.ndim());
+    for (dim_t i = 0; i < in_axis.ndim(); ++i) {
+      oshape[i] = ishape[in_axis[i]];
     }
     return oshape;
   }
-  TShape oshape = TShape(std::max<dim_t>(1, ishape.ndim() - axis.ndim()));
+  TShape oshape = TShape(std::max<dim_t>(1, ishape.ndim() - in_axis.ndim()));
   for (dim_t i = 0, j = 0, k = 0; i < ishape.ndim(); ++i) {
-    if (j < axis.ndim() && i == axis[j]) {
+    if (j < in_axis.ndim() && i == in_axis[j]) {
       ++j;
       continue;
     }
@@ -99,25 +107,6 @@ inline void AxesParamParser(nnvm::NodeAttrs* attrs) {
   .set_attr<FInferShape>("FInferShape", ReduceShape)                    \
   .set_attr<FInferType>("FInferType", ElemwiseType<1, 1>)               \
   .set_num_inputs(1)                                                    \
-  .set_num_outputs(1)                                                   \
-  .set_attr<FGradient>(                                                 \
-    "FGradient", [](const NodePtr& n,                                   \
-                    const std::vector<NodeEntry>& ograds){              \
-      std::string op_name("_"); op_name += #op; op_name += "_grad";     \
-      return MakeGradNode(op_name.c_str(), n,                           \
-                          {ograds[0], n->inputs[0]},                    \
-                          n->attrs.dict);                               \
-  })
-
-#define NNVM_REGISTER_REDUCE_OP_GRAD(op)                                \
-  NNVM_REGISTER_OP(op)                                                  \
-  .add_argument("ograd", "Tensor", "Output grad")                       \
-  .add_argument("input", "Tensor", "Input data")                        \
-  .set_attr_parser(AxesParamParser<ReduceParam>)                        \
-  .set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<ReduceParam>) \
-  .set_attr<FInferShape>("FInferShape", AssignOutputAttr<TShape, 1, 0>) \
-  .set_attr<FInferType>("FInferType", ElemwiseType<2, 1>)               \
-  .set_num_inputs(2)                                                    \
   .set_num_outputs(1)
 
 NNVM_REGISTER_REDUCE_OP(sum)
@@ -137,12 +126,20 @@ Example::
   sum(data, axis=[1,2])
   [ 12.  19.  27.]
 
-)code" NNVM_ADD_FILELINE);
-
-NNVM_REGISTER_REDUCE_OP_GRAD(_sum_grad)
-.describe(R"code(Computes sum grad.
-
-)code" NNVM_ADD_FILELINE);
+)code" NNVM_ADD_FILELINE)
+.set_attr<FGradient>(
+  "FGradient", [](const NodePtr& n,
+                  const std::vector<NodeEntry>& ograds){
+    const ReduceParam& param = nnvm::get<ReduceParam>(n->attrs.parsed);
+    std::ostringstream axis; axis << param.axis;
+    return std::vector<NodeEntry>{
+      MakeNode("expand_like", n->attrs.name + "_grad",
+               {ograds[0], n->inputs[0]},
+               {{"axis", axis.str()},
+                {"keepdims", std::to_string(param.keepdims)},
+                {"exclude", std::to_string(param.exclude)}})
+  };
+});
 
 NNVM_REGISTER_REDUCE_OP(max)
 .describe(R"code(Computes the max of array elements over given axes.

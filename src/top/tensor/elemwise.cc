@@ -242,6 +242,7 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(copy)
 
 DMLC_REGISTER_PARAMETER(InitOpParam);
 DMLC_REGISTER_PARAMETER(InitOpWithScalarParam);
+DMLC_REGISTER_PARAMETER(FillValueParam);
 
 // full
 NNVM_REGISTER_INIT_OP(full)
@@ -286,9 +287,9 @@ NNVM_REGISTER_INIT_LIKE_OP(full_like)
 as the input array
 
 )code"  NNVM_ADD_FILELINE)
-.add_arguments(ScalarParam::__FIELDS__())
-.set_attr_parser(ParamParser<ScalarParam>)
-.set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<ScalarParam>)
+.add_arguments(FillValueParam::__FIELDS__())
+.set_attr_parser(ParamParser<FillValueParam>)
+.set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<FillValueParam>)
 .set_support_level(1);
 
 NNVM_REGISTER_INIT_LIKE_OP(zeros_like)
@@ -465,39 +466,6 @@ NNVM_REGISTER_ELEMWISE_REDUCE_OP(elemwise_sum)
     return ret;
   });
 
-NNVM_REGISTER_ELEMWISE_UNARY_OP(make_loss)
-.describe(R"code(Make your own loss function in network construction.
-
-This operator accepts a customized loss function symbol as a terminal loss and
-the symbol should be an operator with no backward dependency.
-The output of this function is the gradient of loss with respect to the input data.
-
-For example, if you are a making a cross entropy loss function. Assume ``out`` is the
-predicted output and ``label`` is the true label, then the cross entropy can be defined as::
-
-  cross_entropy = label * log(out) + (1 - label) * log(1 - out)
-  loss = make_loss(cross_entropy)
-
-We will need to use ``make_loss`` when we are creating our own loss function.
-
-)code" NNVM_ADD_FILELINE)
-.set_attr<FListOutputNames>(
-  "FListOutputNames", [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"loss"};
-})
-.set_attr<FInplaceIdentity>(
-  "FInplaceIdentity", [](const NodeAttrs& attrs){
-    return std::vector<bool>{true};
-})
-.set_attr<FGradient>(
-  "FGradient", [](const NodePtr& n,
-                  const std::vector<NodeEntry>& ograds) {
-    CHECK(n->inputs.size() == 1) << "make_loss should only take one input";
-    return std::vector<NodeEntry>{
-      MakeNode("ones_like", n->attrs.name + "_head_grads", n->inputs)
-    };
-});
-
 NNVM_REGISTER_ELEMWISE_UNARY_OP(block_grad)
 .describe(R"code(Blocks gradient computation for input.
 
@@ -507,6 +475,40 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(block_grad)
     return std::vector<bool>{true};
 })
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+DMLC_REGISTER_PARAMETER(IndicatorParam);
+
+// indicator function
+NNVM_REGISTER_OP(indicator)
+.describe(R"code(Indicator function according to a given rule.
+
+The function will element-wise compare the array by given rule and
+output 1.0 if the rule is matched, 0.0 otherwise.
+
+Current rules are:
+     0: Greater than 0
+
+)code" NNVM_ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<IndicatorParam>)
+.set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<IndicatorParam>)
+.add_arguments(IndicatorParam::__FIELDS__())
+.set_attr<FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<FInferType>(
+  "FInferType", [](const NodeAttrs& attrs,
+                   std::vector<int>* in_attrs,
+                   std::vector<int>* out_attrs) {
+    CHECK_EQ(out_attrs->size(), 1U);
+    NNVM_ASSIGN_OUTPUT_TYPE(attrs, *out_attrs, 0, static_cast<int>(kFloat32));
+    return true;
+})
+.set_attr<FGradient>(
+  "FGradient", [](const NodePtr& n,
+                  const std::vector<NodeEntry>& ograds) {
+    return MakeZeroGradNodes(n, ograds);
+})
+.set_support_level(1);
 
 }  // namespace top
 }  // namespace nnvm

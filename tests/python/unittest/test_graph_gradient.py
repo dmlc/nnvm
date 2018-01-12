@@ -37,10 +37,9 @@ def test_cnn_gradients():
     # softmax
     mlp = sym.softmax(data=dense2, name='softmax')
     # fake non-sparse label
-    label = sym.full_like(mlp, scalar=1)
+    label = sym.full_like(mlp, fill_value=1)
     # cross entropy loss
-    ce = sym.sum(sym.elemwise_mul(sym.log(mlp), label), axis=1, keepdims=True, name="ce_loss")
-    ce_loss = sym.make_loss(ce)
+    ce_loss = sym.sum(sym.elemwise_mul(sym.log(mlp), label), axis=1, keepdims=True, name="ce_loss")
 
     # input variables:
     # print grad_g.symbol.list_input_names()
@@ -81,7 +80,7 @@ def test_multi_loss_graph_gradients():
     data1 = sym.Variable('data1', shape=(1000, 100), dtype=0)
 
     # fake non-sparse label
-    label = sym.full(scalar=3)
+    label = sym.full(fill_value=3)
 
     # square loss
     sub1 = sym.elemwise_sub(data1, label, name="sub1")
@@ -96,12 +95,11 @@ def test_multi_loss_graph_gradients():
     loss2 = sym.relu(data1, name='loss2')
 
     # block loss1
-    total_loss = sym.make_loss(
-        sym.elemwise_sum(
-            sym.block_grad(loss1),
-            square_loss,
-            num_args=2,
-            name="total_loss"))
+    total_loss = sym.elemwise_sum(
+        sym.block_grad(loss1),
+        square_loss,
+        num_args=2,
+        name="total_loss")
 
     # grad_g.symbol.list_output_names()
     # >> ['loss1_grad_0_output', 'grad_sum_output']

@@ -62,6 +62,11 @@ enum TypeFlag {
   kUint64 = 10,
 };
 
+enum IndicatorRuleFlag {
+  kGT0 = 0,
+  kLT0 = 1,
+};
+
 #define DMLC_DECLARE_DTYPE_FIELD(name)                              \
   DMLC_DECLARE_FIELD(name)                                          \
   .add_enum("float16", kFloat16)                                    \
@@ -84,6 +89,14 @@ struct CastParam : public dmlc::Parameter<CastParam> {
   }
 };
 
+struct IndicatorParam : public dmlc::Parameter<IndicatorParam> {
+  int rule;
+  DMLC_DECLARE_PARAMETER(IndicatorParam) {
+    DMLC_DECLARE_FIELD(rule)
+    .describe("Rule for indicator function");
+  }
+};
+
 struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
   Tuple<int64_t> shape;
 
@@ -97,8 +110,7 @@ struct SqueezeParam : public dmlc::Parameter<SqueezeParam> {
 
   DMLC_DECLARE_PARAMETER(SqueezeParam) {
     DMLC_DECLARE_FIELD(axis).set_default(TShape())
-    .describe("The axis to squeeze in the input tensor."
-              " If set to None, all size=1 axes will be squeezed");
+    .describe("The axis to squeeze in the input tensor.");
   }
 };
 
@@ -107,6 +119,15 @@ struct ScalarParam : public dmlc::Parameter<ScalarParam> {
 
   DMLC_DECLARE_PARAMETER(ScalarParam) {
     DMLC_DECLARE_FIELD(scalar);
+  }
+};
+
+struct FillValueParam : public dmlc::Parameter<FillValueParam> {
+  double fill_value;
+
+  DMLC_DECLARE_PARAMETER(FillValueParam) {
+    DMLC_DECLARE_FIELD(fill_value)
+    .describe("Scalar value to be filled");
   }
 };
 
@@ -161,13 +182,13 @@ struct ReduceParam : public dmlc::Parameter<ReduceParam> {
 struct InitOpWithScalarParam : public dmlc::Parameter<InitOpWithScalarParam> {
   TShape shape;
   int dtype;
-  double scalar;
+  double fill_value;
 
   DMLC_DECLARE_PARAMETER(InitOpWithScalarParam) {
     DMLC_DECLARE_FIELD(shape).set_default(TShape());
     DMLC_DECLARE_DTYPE_FIELD(dtype).set_default(kFloat32)
       .describe("Target data type.");
-    DMLC_DECLARE_FIELD(scalar).describe("Scalar value to fill");
+    DMLC_DECLARE_FIELD(fill_value).describe("Scalar value to fill");
   }
 };
 
@@ -187,6 +208,20 @@ struct ElementWiseReduceParam : public dmlc::Parameter<ElementWiseReduceParam> {
   DMLC_DECLARE_PARAMETER(ElementWiseReduceParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
       .describe("Number of inputs to be reduced.");
+  }
+};
+
+struct DotParam : public dmlc::Parameter<DotParam> {
+  bool transpose_a;
+  bool transpose_b;
+
+  DMLC_DECLARE_PARAMETER(DotParam) {
+    DMLC_DECLARE_FIELD(transpose_a)
+      .describe("If true then transpose the first input before dot.")
+      .set_default(false);
+    DMLC_DECLARE_FIELD(transpose_b)
+      .describe("If true then transpose the second input before dot.")
+      .set_default(false);
   }
 };
 
