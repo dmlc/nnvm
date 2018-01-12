@@ -117,19 +117,31 @@ DMLC_REGISTER_PARAMETER(BatchNormParam);
 inline bool BatchNormInferShape(const nnvm::NodeAttrs& attrs,
                                 std::vector<TShape>* in_shape,
                                 std::vector<TShape>* out_shape) {
+  const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), 5U)
       << "Input:[data, gamma, beta, moving_mean, moving_var]";
   CHECK_EQ(out_shape->size(), 3U);
   const TShape &dshape = in_shape->at(0);
   if (dshape.ndim() == 0) return false;
-  TShape bshape({dshape[1]});
-  NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 1, bshape);
-  NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 2, bshape);
-  NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 3, bshape);
-  NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 4, bshape);
+  auto bshape = [&](int layout) {
+    CHECK(layout == kNCHW || layout == kCHWN)
+            << "Only NCHW and CHWN are included for now. Add more if necessary ...";
+    switch (layout) {
+      case kCHWN:
+        return TShape({dshape[0]});
+      case kNCHW:
+      default:
+        return TShape({dshape[1]});
+    }
+  };
+
+  NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 1, bshape(param.layout));
+  NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 2, bshape(param.layout));
+  NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 3, bshape(param.layout));
+  NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 4, bshape(param.layout));
   NNVM_ASSIGN_OUTPUT_SHAPE(attrs, *out_shape, 0, dshape);
-  NNVM_ASSIGN_OUTPUT_SHAPE(attrs, *out_shape, 1, bshape);
-  NNVM_ASSIGN_OUTPUT_SHAPE(attrs, *out_shape, 2, bshape);
+  NNVM_ASSIGN_OUTPUT_SHAPE(attrs, *out_shape, 1, bshape(param.layout));
+  NNVM_ASSIGN_OUTPUT_SHAPE(attrs, *out_shape, 2, bshape(param.layout));
   return true;
 }
 
