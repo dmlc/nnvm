@@ -58,7 +58,6 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   double momentum;
   bool center;
   bool scale;
-  int layout;
 
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
     DMLC_DECLARE_FIELD(axis).set_default(1)
@@ -73,15 +72,6 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
                   "When the next layer is piecewise linear (also e.g. `nn.relu`),"
                   "this can be disabled since the scaling"
                   "will be done by the next layer.");
-    DMLC_DECLARE_FIELD(layout)
-      .add_enum("NCHW", kNCHW)
-      .add_enum("NHWC", kNHWC)
-      .add_enum("CHWN", kCHWN)
-      .set_default(kNCHW)
-      .describe("Dimension ordering of data. Can be 'NCHW', 'NHWC', etc."
-                "'N', 'C', 'H', 'W' stands for batch, channel, height, and width"
-                "dimensions respectively. Convolution is applied on the 'H' and"
-                "'W' dimensions.");
   }
   // constants
   static const constexpr int kData = 0;

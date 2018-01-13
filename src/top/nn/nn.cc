@@ -123,25 +123,27 @@ inline bool BatchNormInferShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_shape->size(), 3U);
   const TShape &dshape = in_shape->at(0);
   if (dshape.ndim() == 0) return false;
-  auto bshape = [&](int layout) {
-    CHECK(layout == kNCHW || layout == kCHWN)
-            << "Only NCHW and CHWN are included for now. Add more if necessary ...";
-    switch (layout) {
-      case kCHWN:
+  auto bshape = [&](int axis) {
+    CHECK(axis == 0/*CHWN*/ || axis == 1/*NCHW*/ || axis == 3/*NHWC*/)
+            << "Only NCHW, NHWC and CHWN are supported for BatchNorm shape inference";
+    switch (axis) {
+      case 0: /*CHWN*/
         return TShape({dshape[0]});
-      case kNCHW:
+      case 3: /*NHWC*/
+        return TShape({dshape[3]});
+      case 1: /*NCHW*/
       default:
         return TShape({dshape[1]});
     }
   };
 
-  NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 1, bshape(param.layout));
-  NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 2, bshape(param.layout));
-  NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 3, bshape(param.layout));
-  NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 4, bshape(param.layout));
+  NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 1, bshape(param.axis));
+  NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 2, bshape(param.axis));
+  NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 3, bshape(param.axis));
+  NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 4, bshape(param.axis));
   NNVM_ASSIGN_OUTPUT_SHAPE(attrs, *out_shape, 0, dshape);
-  NNVM_ASSIGN_OUTPUT_SHAPE(attrs, *out_shape, 1, bshape(param.layout));
-  NNVM_ASSIGN_OUTPUT_SHAPE(attrs, *out_shape, 2, bshape(param.layout));
+  NNVM_ASSIGN_OUTPUT_SHAPE(attrs, *out_shape, 1, bshape(param.axis));
+  NNVM_ASSIGN_OUTPUT_SHAPE(attrs, *out_shape, 2, bshape(param.axis));
   return true;
 }
 
