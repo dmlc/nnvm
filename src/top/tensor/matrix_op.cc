@@ -13,12 +13,12 @@
 namespace nnvm {
 namespace top {
 
-DMLC_REGISTER_PARAMETER(DotParam);
+DMLC_REGISTER_PARAMETER(MatMulParam);
 
 inline bool DotShape(const nnvm::NodeAttrs& attrs,
                      std::vector<TShape> *in_attrs,
                      std::vector<TShape> *out_attrs) {
-  const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
+  const MatMulParam& param = nnvm::get<MatMulParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   TShape lshape = (*in_attrs)[0];
@@ -41,8 +41,8 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-NNVM_REGISTER_OP(dot)
-  .describe(R"doc(Dot product of two arrays.
+NNVM_REGISTER_OP(matmul)
+  .describe(R"doc(Matrix multiplication of two arrays.
 
 ``dot``'s behavior depends on the input array dimensions:
 
@@ -60,9 +60,9 @@ NNVM_REGISTER_OP(dot)
 .set_support_level(1)
 .set_num_inputs(2)
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<DotParam>)
-.set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<DotParam>)
-.add_arguments(DotParam::__FIELDS__())
+.set_attr_parser(ParamParser<MatMulParam>)
+.set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<MatMulParam>)
+.add_arguments(MatMulParam::__FIELDS__())
 .add_argument("lhs", "NDArray-or-Symbol", "The first input")
 .add_argument("rhs", "NDArray-or-Symbol", "The second input")
 .set_attr<FInferShape>("FInferShape", DotShape)
@@ -72,7 +72,7 @@ NNVM_REGISTER_OP(dot)
                   const std::vector<NodeEntry>& ograds) {
     // z = x dot y
     // xshape (n,m,k), yshape (k,r,s)
-    const DotParam& param = nnvm::get<DotParam>(n->attrs.parsed);
+    const MatMulParam& param = nnvm::get<MatMulParam>(n->attrs.parsed);
     bool Ta = param.transpose_a;
     bool Tb = param.transpose_b;
     // Ta = false, Tb = false
@@ -80,11 +80,11 @@ NNVM_REGISTER_OP(dot)
     // grad_y = x.T dot grad_z
     if (!Ta && !Tb) {
       return std::vector<NodeEntry>{
-        MakeNode("dot", n->attrs.name + "_grad_0",
+        MakeNode("matmul", n->attrs.name + "_grad_0",
                  {ograds[0], n->inputs[1]},
                  {{"transpose_a", "false"},
                   {"transpose_b", "true"}}),
-        MakeNode("dot", n->attrs.name + "_grad_1",
+        MakeNode("matmul", n->attrs.name + "_grad_1",
                  {n->inputs[0], ograds[0]},
                  {{"transpose_a", "true"},
                   {"transpose_b", "false"}})
@@ -94,11 +94,11 @@ NNVM_REGISTER_OP(dot)
       // grad_x = y dot grad_z.T
       // grad_y = x dot grad_z
       return std::vector<NodeEntry>{
-        MakeNode("dot", n->attrs.name + "_grad_0",
+        MakeNode("matmul", n->attrs.name + "_grad_0",
                  {n->inputs[1], ograds[0]},
                  {{"transpose_a", "false"},
                   {"transpose_b", "true"}}),
-        MakeNode("dot", n->attrs.name + "_grad_1",
+        MakeNode("matmul", n->attrs.name + "_grad_1",
                  {n->inputs[0], ograds[0]},
                  {{"transpose_a", "false"},
                   {"transpose_b", "false"}})
@@ -108,11 +108,11 @@ NNVM_REGISTER_OP(dot)
       // grad_x = grad_z dot y
       // grad_y = grad_z.T dot x
       return std::vector<NodeEntry>{
-        MakeNode("dot", n->attrs.name + "_grad_0",
+        MakeNode("matmul", n->attrs.name + "_grad_0",
                  {ograds[0], n->inputs[1]},
                  {{"transpose_a", "false"},
                   {"transpose_b", "false"}}),
-        MakeNode("dot", n->attrs.name + "_grad_1",
+        MakeNode("matmul", n->attrs.name + "_grad_1",
                  {ograds[0], n->inputs[0]},
                  {{"transpose_a", "true"},
                   {"transpose_b", "false"}})
@@ -122,11 +122,11 @@ NNVM_REGISTER_OP(dot)
       // grad_x = y.T dot grad_z.T
       // grad_y = grad_z.T dot x.T
       return std::vector<NodeEntry>{
-        MakeNode("dot", n->attrs.name + "_grad_0",
+        MakeNode("matmul", n->attrs.name + "_grad_0",
                  {n->inputs[1], ograds[0]},
                  {{"transpose_a", "true"},
                   {"transpose_b", "true"}}),
-        MakeNode("dot", n->attrs.name + "_grad_1",
+        MakeNode("matmul", n->attrs.name + "_grad_1",
                  {ograds[0], n->inputs[0]},
                  {{"transpose_a", "true"},
                   {"transpose_b", "true"}})

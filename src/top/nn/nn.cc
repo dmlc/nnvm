@@ -77,10 +77,10 @@ If ``use_bias`` is set to be false, then the ``bias`` term is ignored.
                   const std::vector<NodeEntry>& ograds) {
     const DenseParam& param = nnvm::get<DenseParam>(n->attrs.parsed);
 
-    NodeEntry data_grad = MakeNode("dot",
+    NodeEntry data_grad = MakeNode("matmul",
                                    n->attrs.name + "_data_grad",
                                    {ograds[0], n->inputs[DenseParam::kWeight]});
-    NodeEntry w_grad_sub = MakeNode("dot",
+    NodeEntry w_grad_sub = MakeNode("matmul",
                                      n->attrs.name + "_weight_grad_sub0",
                                      {ograds[0], n->inputs[DenseParam::kData]},
                                      {{"transpose_a", "true"}});

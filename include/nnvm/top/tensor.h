@@ -211,11 +211,11 @@ struct ElementWiseReduceParam : public dmlc::Parameter<ElementWiseReduceParam> {
   }
 };
 
-struct DotParam : public dmlc::Parameter<DotParam> {
+struct MatMulParam : public dmlc::Parameter<MatMulParam> {
   bool transpose_a;
   bool transpose_b;
 
-  DMLC_DECLARE_PARAMETER(DotParam) {
+  DMLC_DECLARE_PARAMETER(MatMulParam) {
     DMLC_DECLARE_FIELD(transpose_a)
       .describe("If true then transpose the first input before dot.")
       .set_default(false);
