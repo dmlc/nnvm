@@ -39,7 +39,11 @@ def test_cnn_gradients():
     # fake non-sparse label
     label = sym.full_like(mlp, fill_value=1)
     # cross entropy loss
-    ce_loss = sym.sum(sym.elemwise_mul(sym.log(mlp), label), axis=1, keepdims=True, name="ce_loss")
+    ce_loss = sym.sum(
+        sym.elemwise_mul(sym.log_softmax(dense2), label),
+        axis=1,
+        keepdims=True,
+        name="ce_loss")
 
     # input variables:
     # print grad_g.symbol.list_input_names()

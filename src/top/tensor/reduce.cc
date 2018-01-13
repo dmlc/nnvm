@@ -144,12 +144,50 @@ Example::
 NNVM_REGISTER_REDUCE_OP(max)
 .describe(R"code(Computes the max of array elements over given axes.
 
-)code" NNVM_ADD_FILELINE);
+)code" NNVM_ADD_FILELINE)
+.set_attr<FGradient>(
+  "FGradient", [](const NodePtr& n,
+                  const std::vector<NodeEntry>& ograds){
+    const ReduceParam& param = nnvm::get<ReduceParam>(n->attrs.parsed);
+    std::ostringstream axis; axis << param.axis;
+    NodeEntry sub0 = MakeNode("expand_like", n->attrs.name + "_grad_sub0",
+                             {ograds[0], n->inputs[0]},
+                             {{"axis", axis.str()},
+                              {"keepdims", std::to_string(param.keepdims)},
+                              {"exclude", std::to_string(param.exclude)}});
+    NodeEntry sub1 = MakeNode("indicator", n->attrs.name + "_grad_sub1",
+                              {ograds[0]},
+                              {{"rule", std::to_string(kMax)},
+                               {"axis", axis.str()},
+                               {"exclude", std::to_string(param.exclude)}});
+    return std::vector<NodeEntry>{
+      MakeNode("elemwise_mul", n->attrs.name + "_grad", {sub0, sub1})
+    };
+});
 
 NNVM_REGISTER_REDUCE_OP(min)
 .describe(R"code(Computes the min of array elements over given axes.
 
-)code" NNVM_ADD_FILELINE);
+)code" NNVM_ADD_FILELINE)
+.set_attr<FGradient>(
+  "FGradient", [](const NodePtr& n,
+                  const std::vector<NodeEntry>& ograds){
+    const ReduceParam& param = nnvm::get<ReduceParam>(n->attrs.parsed);
+    std::ostringstream axis; axis << param.axis;
+    NodeEntry sub0 = MakeNode("expand_like", n->attrs.name + "_grad_sub0",
+                              {ograds[0], n->inputs[0]},
+                              {{"axis", axis.str()},
+                               {"keepdims", std::to_string(param.keepdims)},
+                               {"exclude", std::to_string(param.exclude)}});
+    NodeEntry sub1 = MakeNode("indicator", n->attrs.name + "_grad_sub1",
+                              {ograds[0]},
+                              {{"rule", std::to_string(kMin)},
+                               {"axis", axis.str()},
+                               {"exclude", std::to_string(param.exclude)}});
+    return std::vector<NodeEntry>{
+      MakeNode("elemwise_mul", n->attrs.name + "_grad", {sub0, sub1})
+    };
+});
 
 
 }  // namespace top

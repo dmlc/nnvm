@@ -117,7 +117,8 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(relu)
     // grad = indicator(x > 0)
     return std::vector<NodeEntry>{
       MakeNode("indicator", n->attrs.name + "_grad",
-               {n->inputs[0]}, {{"rule", std::to_string(kGT0)}})
+               {n->inputs[0]},
+               {{"rule", std::to_string(kGT0)}, {"exclude", "true"}})
     };
 })
 .set_support_level(1);
@@ -259,16 +260,16 @@ NNVM_REGISTER_OP(softmax)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds) {
-    // grad_x = grad_y dot jacob of softmax
+    // grad_x = grad_y dot jacobian of softmax
     //
-    // jacob of softmax
+    // jacobian of softmax
     // [-y1y1 + y1, -y1y2,        ...    ]
     // [ ...      , -y2y2 + y2,   ...    ]
     // [ ...                      ...    ]
     // [ ...                  ,-ynyn + yn]
     //
     // grad_x =
-    // [-y1*(ograd1*y1 - 1 + ograd2*y2) + ..., -y2*(ograd1*y1 - 1 + ograd2*y2, ...]]
+    // [-y1*(ograd1*y1 - 1 + ograd2*y2 + ..., -y2*(ograd1*y1 - 1 + ograd2*y2, ..., ...]]
 
     // grad_x = ograd elemwise_mul output
     // grad_x = sum(grad_x, keepdim, axis)
@@ -304,6 +305,38 @@ NNVM_REGISTER_OP(log_softmax)
 .set_num_outputs(1)
 .set_attr<FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FGradient>(
+  "FGradient", [](const NodePtr& n,
+                  const std::vector<NodeEntry>& ograds) {
+    // grad_x = grad_y dot jacobian of softmax
+    //
+    // jacobian of softmax
+    // [-y1 + 1, -y2,        ...    ]
+    // [ ...   , -y2 + 1,    ...    ]
+    // [ ...                 ...    ]
+    // [ ...                ,-yn + 1]
+    //
+    // grad_x =
+    // [-(ograd1*y1 - 1 + ograd2*y2 + ..., -(ograd1*y1 - 1 + ograd2*y2, ..., ...]]
+
+    // grad_x = ograd elemwise_mul output
+    // grad_x = sum(grad_x, keepdim, axis)
+    // grad_x = neg grad_x
+    // grad_x = grad_x + ones_like(grad_x)
+    // grad_x = expand_dims(grad_x, axis)
+    const SoftmaxParam& param = nnvm::get<SoftmaxParam>(n->attrs.parsed);
+    NodeEntry output =  NodeEntry{n, 0, 0};
+    NodeEntry sub0 = MakeNode("elemwise_mul", n->attrs.name + "_grad_sub0", {ograds[0], output});
+    NodeEntry sub1 = MakeNode("sum", n->attrs.name + "_grad_sub1", {sub0},
+                              {{"axis", std::to_string(param.axis)}, {"keepdims", "true"}});
+    NodeEntry sub2 = MakeNode("negative", n->attrs.name + "_grad_sub2", {sub1});
+    NodeEntry sub3 = MakeNode("ones_like", n->attrs.name + "_grad_sub3", {sub2});
+    NodeEntry sub4 = MakeNode("elemwise_add", n->attrs.name + "_grad_sub4", {sub2, sub3});
+    return std::vector<NodeEntry> {
+      MakeNode("expand_like", n->attrs.name + "_grad", {sub4, output},
+               {{"axis", std::to_string(param.axis)}})
+    };
+})
 .set_support_level(1);
 
 // leaky_rlu
@@ -332,11 +365,13 @@ NNVM_REGISTER_OP(leaky_relu)
     NodeEntry sub0 = MakeNode("indicator",
                               n->attrs.name + "_pos_grad",
                               {n->inputs[0]},
-                              {{"rule", std::to_string(kGT0)}});
+                              {{"rule", std::to_string(kGT0)},
+                               {"exclude", "true"}});
     NodeEntry sub1 = MakeNode("indicator",
                               n->attrs.name + "_neg_grad",
                               {n->inputs[0]},
-                              {{"rule", std::to_string(kLT0)}});
+                              {{"rule", std::to_string(kLT0)},
+                               {"exclude", "true"}});
     NodeEntry sub2 = MakeNode("__mul_scalar__", n->attrs.name + "_neg_mul_2",
                               {sub1},
                               {{"scalar", std::to_string(param.alpha)}});

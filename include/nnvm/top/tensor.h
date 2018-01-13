@@ -65,6 +65,8 @@ enum TypeFlag {
 enum IndicatorRuleFlag {
   kGT0 = 0,
   kLT0 = 1,
+  kMax = 2,
+  kMin = 3,
 };
 
 #define DMLC_DECLARE_DTYPE_FIELD(name)                              \
@@ -91,9 +93,26 @@ struct CastParam : public dmlc::Parameter<CastParam> {
 
 struct IndicatorParam : public dmlc::Parameter<IndicatorParam> {
   int rule;
+  TShape axis;
+  bool exclude;
   DMLC_DECLARE_PARAMETER(IndicatorParam) {
     DMLC_DECLARE_FIELD(rule)
     .describe("Rule for indicator function");
+    DMLC_DECLARE_FIELD(axis).set_default(TShape())
+    .describe(R"code(The axis or axes along which to perform the indicator rule.
+
+        The default, `axis=()`, will compute over all elements into a
+        scalar array with shape `(1,)`.
+
+        If `axis` is int, rule is applied on a particular axis.
+
+        If `axis` is a tuple of ints, rule is applied on all the axes
+        specified in the tuple.
+
+        If `exclude` is true, rule will be applied on the axes that are
+        NOT in axis instead.)code");
+    DMLC_DECLARE_FIELD(exclude).set_default(false)
+    .describe("Whether to apply rule on axis that are NOT in axis instead.");
   }
 };
 

@@ -178,8 +178,8 @@ inline bool ExpandDimsInferShape(const NodeAttrs& attrs,
 NNVM_REGISTER_OP(expand_dims)
 .describe(R"code(Inserts a new axis of size 1 into the array shape
 
-For example, given ``x`` with shape ``(2,3,4)``, then ``expand_dims(x, axis=1)``
-will return a new array with shape ``(2,1,3,4)``.
+For example, given ``x`` with shape ``(2,3,4)``, then ``expand_dims(x, axis=1, num_newaxis=5)``
+will return a new array with shape ``(2,5,3,4)``.
 
 )code" NNVM_ADD_FILELINE)
 .add_argument("data", "Tensor", "Input tensor")
@@ -190,6 +190,15 @@ will return a new array with shape ``(2,1,3,4)``.
 .set_attr<FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_num_inputs(1)
 .set_num_outputs(1)
+.set_attr<FGradient>(
+  "FGradient", [](const NodePtr& n,
+                  const std::vector<NodeEntry>& ograds){
+    const ExpandDimsParam& param = nnvm::get<ExpandDimsParam>(n->attrs.parsed);
+    return std::vector<NodeEntry> {
+      MakeNode("sum", n->attrs.name + "_grad", {ograds[0]},
+               {{"axis", std::to_string(param.axis)}})
+    };
+})
 .set_support_level(1);
 
 NNVM_REGISTER_OP(expand_like)
@@ -495,6 +504,14 @@ The significance of each is explained below:
 .set_attr<FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_num_inputs(1)
 .set_num_outputs(1)
+.set_attr<FGradient>(
+  "FGradient", [](const NodePtr& n,
+                  const std::vector<NodeEntry>& ograds) {
+    return std::vector<NodeEntry>{
+      MakeNode("reshape_like", n->attrs.name + "_grad",
+               {ograds[0], n->inputs[0]})
+    };
+})
 .set_support_level(3);
 
 NNVM_REGISTER_OP(reshape_like)
@@ -681,8 +698,10 @@ Examples::
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds) {
+    const TransposeParam& param = nnvm::get<TransposeParam>(n->attrs.parsed);
+    std::ostringstream oss; oss << param.axes;
     return std::vector<NodeEntry>{
-      MakeNode("transpose", n->attrs.name + "_t", {ograds[0]}, n->attrs.dict)
+      MakeNode("transpose", n->attrs.name + "_t", {ograds[0]}, {{"axes", oss.str()}})
     };
 });
 
