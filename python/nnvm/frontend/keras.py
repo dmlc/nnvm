@@ -271,7 +271,6 @@ def _convert_pooling(insym, keras_layer, symtab):
 def _convert_upsample(insym, keras_layer, _):
     _check_data_format(keras_layer)
     upsample_type = type(keras_layer).__name__
-
     if upsample_type == "UpSampling1D":
         h = keras_layer.size
         params = {'scale': h}
@@ -289,7 +288,6 @@ def _convert_upsample(insym, keras_layer, _):
         params = {'scale': h}
     else:
         raise TypeError("Unsupported upsampling type : {}".format(upsample_type))
-
     return _sym.upsampling(insym, **params)
 
 
@@ -383,7 +381,7 @@ _convert_map = {
     'Subtract'                 : _convert_merge,
     'Multiply'                 : _convert_merge,
     'ZeroPadding2D'            : _convert_padding,
-    'UpSampling2D'           : _convert_upsample,
+    'UpSampling2D'             : _convert_upsample,
 
     # 'ZeroPadding1D'          : _convert_padding,
     # 'AveragePooling1D'       : _convert_pooling,
