@@ -155,10 +155,9 @@ NNVM_REGISTER_REDUCE_OP(max)
                              {{"axis", axis.str()},
                               {"keepdims", std::to_string(param.keepdims)},
                               {"exclude", std::to_string(param.exclude)}});
-    NodeEntry sub1 = MakeNode("indicator", n->attrs.name + "_grad_sub1",
+    NodeEntry sub1 = MakeNode("max_mask", n->attrs.name + "_grad_sub1",
                               {ograds[0]},
-                              {{"rule", std::to_string(kMax)},
-                               {"axis", axis.str()},
+                              {{"axis", axis.str()},
                                {"exclude", std::to_string(param.exclude)}});
     return std::vector<NodeEntry>{
       MakeNode("elemwise_mul", n->attrs.name + "_grad", {sub0, sub1})
@@ -179,10 +178,9 @@ NNVM_REGISTER_REDUCE_OP(min)
                               {{"axis", axis.str()},
                                {"keepdims", std::to_string(param.keepdims)},
                                {"exclude", std::to_string(param.exclude)}});
-    NodeEntry sub1 = MakeNode("indicator", n->attrs.name + "_grad_sub1",
+    NodeEntry sub1 = MakeNode("min_mask", n->attrs.name + "_grad_sub1",
                               {ograds[0]},
-                              {{"rule", std::to_string(kMin)},
-                               {"axis", axis.str()},
+                              {{"axis", axis.str()},
                                {"exclude", std::to_string(param.exclude)}});
     return std::vector<NodeEntry>{
       MakeNode("elemwise_mul", n->attrs.name + "_grad", {sub0, sub1})

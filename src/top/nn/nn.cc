@@ -115,10 +115,11 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(relu)
                   const std::vector<NodeEntry>& ograds) {
     // y = relu(x)
     // grad = indicator(x > 0)
+    NodeEntry zero = MakeNode("zeros_like", n->attrs.name + "_grad_zero",
+                              {n->inputs[0]});
     return std::vector<NodeEntry>{
-      MakeNode("indicator", n->attrs.name + "_grad",
-               {n->inputs[0]},
-               {{"rule", std::to_string(kGT0)}, {"exclude", "true"}})
+      MakeNode("greater", n->attrs.name + "_grad",
+               {n->inputs[0], zero}, {{"exclude", "true"}})
     };
 })
 .set_support_level(1);
@@ -362,16 +363,12 @@ NNVM_REGISTER_OP(leaky_relu)
     // y = leak_relu(x)
     // grad = indicator(x > 0) + alpha * indicator(x < 0)
     const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(n->attrs.parsed);
-    NodeEntry sub0 = MakeNode("indicator",
-                              n->attrs.name + "_pos_grad",
-                              {n->inputs[0]},
-                              {{"rule", std::to_string(kGT0)},
-                               {"exclude", "true"}});
-    NodeEntry sub1 = MakeNode("indicator",
-                              n->attrs.name + "_neg_grad",
-                              {n->inputs[0]},
-                              {{"rule", std::to_string(kLT0)},
-                               {"exclude", "true"}});
+    NodeEntry zero = MakeNode("zeros_like", n->attrs.name + "_grad_zero",
+                              {n->inputs[0]});
+    NodeEntry sub0 = MakeNode("greater", n->attrs.name + "_pos_grad",
+                              {n->inputs[0], zero}, {{"exclude", "true"}});
+    NodeEntry sub1 = MakeNode("less", n->attrs.name + "_neg_grad",
+                              {n->inputs[0], zero}, {{"exclude", "true"}});
     NodeEntry sub2 = MakeNode("__mul_scalar__", n->attrs.name + "_neg_mul_2",
                               {sub1},
                               {{"scalar", std::to_string(param.alpha)}});

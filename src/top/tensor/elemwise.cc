@@ -479,35 +479,47 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(block_grad)
 DMLC_REGISTER_PARAMETER(IndicatorParam);
 
 // indicator function
-NNVM_REGISTER_OP(indicator)
-.describe(R"code(Indicator function according to a given rule.
-
-The function will element-wise compare the array by given rule and
-output 1.0 if the rule is matched, 0.0 otherwise.
-
-Current rules are:
-     0: Greater than 0
+NNVM_REGISTER_INDICATOR_OP(greater)
+.describe(R"code(Greater function that returns a mask tensor
+with 1.0 if (left > right), otherwise 0.0 element-wise.
 
 )code" NNVM_ADD_FILELINE)
+.add_argument("lhs", "Tensor", "First input")
+.add_argument("rhs", "Tensor", "Second input")
+.set_num_inputs(2)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
+.set_support_level(1);
+
+
+NNVM_REGISTER_INDICATOR_OP(less)
+  .describe(R"code(Less function that returns a mask tensor
+with 1.0 if (left < right), otherwise 0.0 element-wise.
+
+)code" NNVM_ADD_FILELINE)
+.add_argument("lhs", "Tensor", "First input")
+.add_argument("rhs", "Tensor", "Second input")
+.set_num_inputs(2)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
+.set_support_level(1);
+
+NNVM_REGISTER_INDICATOR_OP(max_mask)
+  .describe(R"code(Function that returns a mask tensor
+with 1.0 if the value is maximum over given axes, otherwise 0.0 element-wise.
+
+)code" NNVM_ADD_FILELINE)
+.add_argument("data", "Tensor", "Input")
 .set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<IndicatorParam>)
-.set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<IndicatorParam>)
-.add_arguments(IndicatorParam::__FIELDS__())
-.set_attr<FInferShape>("FInferShape", ElemwiseShape<1, 1>)
-.set_attr<FInferType>(
-  "FInferType", [](const NodeAttrs& attrs,
-                   std::vector<int>* in_attrs,
-                   std::vector<int>* out_attrs) {
-    CHECK_EQ(out_attrs->size(), 1U);
-    NNVM_ASSIGN_OUTPUT_TYPE(attrs, *out_attrs, 0, static_cast<int>(kFloat32));
-    return true;
-})
-.set_attr<FGradient>(
-  "FGradient", [](const NodePtr& n,
-                  const std::vector<NodeEntry>& ograds) {
-    return MakeZeroGradNodes(n, ograds);
-})
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_support_level(1);
+
+NNVM_REGISTER_INDICATOR_OP(min_mask)
+  .describe(R"code(Function that returns a mask tensor
+with 1.0 if the value is minimum over given axes, otherwise 0.0 element-wise.
+
+)code" NNVM_ADD_FILELINE)
+.add_argument("data", "Tensor", "Input")
+.set_num_inputs(1)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_support_level(1);
 
 }  // namespace top

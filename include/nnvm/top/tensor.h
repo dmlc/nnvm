@@ -92,12 +92,9 @@ struct CastParam : public dmlc::Parameter<CastParam> {
 };
 
 struct IndicatorParam : public dmlc::Parameter<IndicatorParam> {
-  int rule;
   TShape axis;
   bool exclude;
   DMLC_DECLARE_PARAMETER(IndicatorParam) {
-    DMLC_DECLARE_FIELD(rule)
-    .describe("Rule for indicator function");
     DMLC_DECLARE_FIELD(axis).set_default(TShape())
     .describe(R"code(The axis or axes along which to perform the indicator rule.
 

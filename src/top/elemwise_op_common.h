@@ -153,6 +153,29 @@ inline bool ElementWiseReduceType(const NodeAttrs& attrs,
   .set_attr<nnvm::FInferType>("FInferType", ElementWiseReduceType)  \
   .add_argument("args", "Symbol[]", "Positional input arguments")
 
+
+#define NNVM_REGISTER_INDICATOR_OP(name)                            \
+  NNVM_REGISTER_OP(name)                                            \
+  .set_num_outputs(1)                                               \
+  .set_attr_parser(ParamParser<IndicatorParam>)                     \
+  .set_attr<FGetAttrDict>("FGetAttrDict",                           \
+    ParamGetAttrDict<IndicatorParam>)                               \
+  .set_attr<FInferType>(                                            \
+    "FInferType", [](const NodeAttrs& attrs,                        \
+                     std::vector<int>* in_attrs,                    \
+                     std::vector<int>* out_attrs) {                 \
+      CHECK_EQ(out_attrs->size(), 1U);                              \
+      NNVM_ASSIGN_OUTPUT_TYPE(attrs, *out_attrs, 0,                 \
+        static_cast<int>(kFloat32));                                \
+      return true;                                                  \
+  })                                                                \
+  .set_attr<FGradient>(                                             \
+    "FGradient", [](const NodePtr& n,                               \
+                    const std::vector<NodeEntry>& ograds) {         \
+      return MakeZeroGradNodes(n, ograds);                          \
+  })
+
+
 }  // namespace top
 }  // namespace nnvm
 #endif  // NNVM_TOP_ELEMWISE_OP_COMMON_H_
