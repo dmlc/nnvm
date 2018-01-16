@@ -101,7 +101,7 @@ port = 9090
 if not use_mali:
     # run server locally
     host = 'localhost'
-    port = 9091
+    port = 9092
     server = rpc.Server(host=host, port=port)
 
 ######################################################################
