@@ -85,8 +85,8 @@ from tvm.contrib import graph_runtime as runtime
 # For demonstration, we simply start an RPC server on the same machine,
 # if :code:`use_rasp` is False. If you have set up the remote
 # environment, please change the three lines below: change the
-# :code:`use_rasp` to True, also change the host and port with your
-# device's host address and port number.
+# :code:`use_rasp` to True, also change the :code:`host` and :code:`port`
+# with your device's host address and port number.
 
 use_rasp = False
 host = 'rasp0'
@@ -114,7 +114,7 @@ import numpy as np
 block = get_model('resnet18_v1', pretrained=True)
 
 ######################################################################
-# In order to test our model, here we download a image of cat and
+# In order to test our model, here we download an image of cat and
 # transform its format.
 img_name = 'cat.jpg'
 download('https://github.com/dmlc/mxnet.js/blob/master/data/cat.png?raw=true', img_name)
