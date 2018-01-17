@@ -62,10 +62,26 @@ BatchNormToInferUnpack(const nnvm::NodeAttrs& attrs,
   int axis = param.axis;
   scale = ExpandBiasToMatchAxis(scale, dshape.ndim(), 1, axis);
   shift = ExpandBiasToMatchAxis(shift, dshape.ndim(), 1, axis);
+  CHECK(param.axis == 0/*CHWN*/ || param.axis == 1/*NCHW*/ ||
+        param.axis == 3/*NHWC*/)
+          << "Only NCHW, NHWC and CHWN are supported for BatchNorm";
+  std::unordered_map<std::string, std::string> bcast_attrs;
+  switch (param.axis) {
+    case 0: /*CHWN*/
+      bcast_attrs["layout"] = "CHWN";
+      break;
+    case 3: /*NHWC*/
+      bcast_attrs["layout"] = "NHWC";
+      break;
+    case 1: /*NCHW*/
+    default:
+      bcast_attrs["layout"] = "NCHW";
+      break;
+  }
   NodeEntry out = MakeNode("broadcast_mul", bn_name + "_a_mul_data",
-                           {data, scale});
+                           {data, scale}, bcast_attrs);
   out = MakeNode("broadcast_add", bn_name + "_out",
-                 {out, shift});
+                 {out, shift}, bcast_attrs);
   // It is invalid to ref the other values of BN after infernece transform.
   NodeEntry undef = MakeNode("__undef__", "undef", {});
   return {out, undef, undef};
