@@ -54,3 +54,6 @@ cat.jpg
 
 # Mac OS X
 .DS_Store
+
+# Jetbrain
+.idea
