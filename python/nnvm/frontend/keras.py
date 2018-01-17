@@ -2,6 +2,8 @@
 """Keras frontend."""
 from __future__ import absolute_import as _abs
 import sys
+from enum import Enum
+from collections import Sequence
 import numpy as np
 import tvm
 from .. import symbol as _sym
@@ -101,6 +103,46 @@ def _convert_dense(insym, keras_layer, symtab):
     return out
 
 
+class Anchor(Enum):
+    CENTER = 0
+    LEFT = 1
+    RIGHT = 2
+
+
+def _calculate_padding1d(kernel, stride, anchor):
+    stride = max(stride, 1)
+    kernel = max(kernel, 1)
+    pad = (kernel - 1) * stride
+    pad_l = pad // 2
+    pad_r = pad - pad_l
+
+    if anchor == Anchor.LEFT:
+        pad_r += pad_l
+        pad_l = 0
+    elif anchor == Anchor.RIGHT:
+        pad_l += pad_r
+        pad_r = 0
+    elif anchor == Anchor.CENTER:
+        pass
+    else:
+        raise TypeError("Unknown anchor : {}".format(anchor))
+
+    return (pad_l, pad_r)
+
+
+def _calculate_padding(kernel, stride, anchor=Anchor.CENTER):
+    if not isinstance(kernel, Sequence):
+        kernel = (kernel,)
+    if not isinstance(kernel, Sequence):
+        stride = (stride,)
+
+    if len(kernel) != len(stride):
+        raise TypeError("kernel and stride must have the same length : {} {}"
+                        .format(kernel, stride))
+
+    return tuple((_calculate_padding1d(k, s, anchor) for k, s in zip(kernel, stride)))
+
+
 def _convert_convolution(insym, keras_layer, symtab):
     _check_data_format(keras_layer)
     is_deconv = type(keras_layer).__name__ == 'Conv2DTranspose'
@@ -139,17 +181,10 @@ def _convert_convolution(insym, keras_layer, symtab):
         pass
     # we insert a separate pad operator
     elif keras_layer.padding == 'same':
-        in_h = keras_layer.input.shape[1].value
-        in_w = keras_layer.input.shape[2].value
-        out_h = (in_h + stride_h - 1) // stride_h
-        out_w = (in_w + stride_w - 1) // stride_w
-        pad_h = np.maximum((out_h - 1) * stride_h + kernel_h - in_h, 0)
-        pad_w = np.maximum((out_w - 1) * stride_w + kernel_w - in_w, 0)
-        pad_t = pad_h // 2
-        pad_l = pad_w // 2
-        pad_b = pad_h - pad_t
-        pad_r = pad_w - pad_l
-        insym = _sym.pad(data=insym, pad_width=((0, 0), (0, 0), (pad_t, pad_b), (pad_l, pad_r)))
+        kernel = (0, kernel_h, kernel_w)
+        stride = (0, max(dilation[0], 1), max(dilation[1], 1))
+        padding = _calculate_padding(kernel, stride)
+        insym = _sym.pad(data=insym, pad_width=padding)
     else:
         raise TypeError("Unsupported padding type : {}".format(keras_layer.padding))
     if is_deconv:
@@ -185,18 +220,10 @@ def _convert_separable_convolution(insym, keras_layer, symtab):
         pass
     # we insert a separate pad operator
     elif keras_layer.padding == 'same':
-        in_h = keras_layer.input.shape[1].value
-        in_w = keras_layer.input.shape[2].value
-        out_h = (in_h + stride_h - 1) // stride_h
-        out_w = (in_w + stride_w - 1) // stride_w
-        pad_h = np.maximum((out_h - 1) * stride_h + kernel_h - in_h, 0)
-        pad_w = np.maximum((out_w - 1) * stride_w + kernel_w - in_w, 0)
-        pad_t = pad_h // 2
-        pad_l = pad_w // 2
-        pad_b = pad_h - pad_t
-        pad_r = pad_w - pad_l
-        insym = _sym.pad(data=insym, pad_width=(
-            (0, 0), (0, 0), (pad_t, pad_b), (pad_l, pad_r)))
+        kernel = (0, kernel_h, kernel_w)
+        stride = (0, stride_h, stride_w)
+        padding = _calculate_padding(kernel, stride)
+        insym = _sym.pad(data=insym, pad_width=padding)
     else:
         raise TypeError("Unsupported padding type : {}".format(keras_layer.padding))
     depthconv = _sym.conv2d(data=insym, **params0)
@@ -246,16 +273,12 @@ def _convert_pooling(insym, keras_layer, symtab):
         if keras_layer.padding == 'valid':
             params['padding'] = [0, 0]
         elif keras_layer.padding == 'same':
-            in_h = keras_layer.input.shape[1].value
-            in_w = keras_layer.input.shape[2].value
-            out_h = (in_h + stride_h - 1) // stride_h
-            out_w = (in_w + stride_w - 1) // stride_w
-            pad_h = np.maximum((out_h - 1) * stride_h + pool_h - in_h, 0)
-            pad_w = np.maximum((out_w - 1) * stride_w + pool_w - in_w, 0)
-            pad_t = pad_h // 2
-            pad_l = pad_w // 2
-            pad_b = pad_h - pad_t
-            pad_r = pad_w - pad_l
+            pool = (pool_h, pool_w)
+            stride = (stride_h, stride_w)
+            padding = _calculate_padding(pool, stride, anchor=Anchor.RIGHT)
+
+            pad_t, pad_b = padding[0]
+            pad_l, pad_r = padding[1]
             params['padding'] = [pad_t, pad_l]
             if pad_b > pad_t and pad_r > pad_l:
                 params['ceil_mode'] = True
