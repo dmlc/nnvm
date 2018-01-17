@@ -9,6 +9,7 @@
 #include <dmlc/base.h>
 #include <dmlc/parameter.h>
 #include <nnvm/tuple.h>
+#include <nnvm/top/nn.h>
 
 namespace nnvm {
 namespace top {
@@ -127,6 +128,22 @@ struct BroadcastToParam : public dmlc::Parameter<BroadcastToParam> {
       .describe("The shape of the desired array."
                 " We can set the dim to zero if it's same as the original."
                 " E.g `A = broadcast_to(B, shape=(10, 0, 0))` ");
+  }
+};
+
+struct BinaryBroadcastParam: public dmlc::Parameter<BinaryBroadcastParam> {
+  int layout;
+
+  DMLC_DECLARE_PARAMETER(BinaryBroadcastParam) {
+    DMLC_DECLARE_FIELD(layout)
+      .add_enum("NCHW", kNCHW)
+      .add_enum("NHWC", kNHWC)
+      .add_enum("CHWN", kCHWN)
+      .set_default(kNCHW)
+      .describe("Dimension ordering of data. Can be 'NCHW', 'NHWC', etc."
+                "'N', 'C', 'H', 'W' stands for batch, channel, height, and width"
+                "dimensions respectively. Convolution is applied on the 'H' and"
+                "'W' dimensions.");
   }
 };
 
