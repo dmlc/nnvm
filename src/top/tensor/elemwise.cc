@@ -502,23 +502,29 @@ with 1.0 if (left < right), otherwise 0.0 element-wise.
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
 .set_support_level(1);
 
-NNVM_REGISTER_INDICATOR_OP(max_mask)
+NNVM_REGISTER_INDICATOR_OP(_max_mask)
   .describe(R"code(Function that returns a mask tensor
 with 1.0 if the value is maximum over given axes, otherwise 0.0 element-wise.
 
 )code" NNVM_ADD_FILELINE)
 .add_argument("data", "Tensor", "Input")
 .set_num_inputs(1)
+.add_arguments(IndicatorParam::__FIELDS__())
+.set_attr_parser(ParamParser<IndicatorParam>)
+.set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<IndicatorParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_support_level(1);
 
-NNVM_REGISTER_INDICATOR_OP(min_mask)
+NNVM_REGISTER_INDICATOR_OP(_min_mask)
   .describe(R"code(Function that returns a mask tensor
 with 1.0 if the value is minimum over given axes, otherwise 0.0 element-wise.
 
 )code" NNVM_ADD_FILELINE)
 .add_argument("data", "Tensor", "Input")
 .set_num_inputs(1)
+.add_arguments(IndicatorParam::__FIELDS__())
+.set_attr_parser(ParamParser<IndicatorParam>)
+.set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<IndicatorParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_support_level(1);
 

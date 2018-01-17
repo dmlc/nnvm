@@ -157,9 +157,6 @@ inline bool ElementWiseReduceType(const NodeAttrs& attrs,
 #define NNVM_REGISTER_INDICATOR_OP(name)                            \
   NNVM_REGISTER_OP(name)                                            \
   .set_num_outputs(1)                                               \
-  .set_attr_parser(ParamParser<IndicatorParam>)                     \
-  .set_attr<FGetAttrDict>("FGetAttrDict",                           \
-    ParamGetAttrDict<IndicatorParam>)                               \
   .set_attr<FInferType>(                                            \
     "FInferType", [](const NodeAttrs& attrs,                        \
                      std::vector<int>* in_attrs,                    \

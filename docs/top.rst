@@ -28,7 +28,7 @@ This level enables fully connected multi-layer perceptron.
    :nosignatures:
 
    nnvm.symbol.dense
-   nnvm.symbol.dot
+   nnvm.symbol.matmul
    nnvm.symbol.relu
    nnvm.symbol.tanh
    nnvm.symbol.sigmoid
@@ -113,7 +113,7 @@ This level enables typical convnet models.
 Detailed Definitions
 --------------------
 .. autofunction:: nnvm.symbol.dense
-.. autofunction:: nnvm.symbol.dot
+.. autofunction:: nnvm.symbol.matmul
 .. autofunction:: nnvm.symbol.relu
 .. autofunction:: nnvm.symbol.tanh
 .. autofunction:: nnvm.symbol.sigmoid
