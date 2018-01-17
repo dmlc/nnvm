@@ -63,14 +63,14 @@ BatchNormToInferUnpack(const nnvm::NodeAttrs& attrs,
   scale = ExpandBiasToMatchAxis(scale, dshape.ndim(), 1, axis);
   shift = ExpandBiasToMatchAxis(shift, dshape.ndim(), 1, axis);
 
-  CHECK(param.axis == 3/*CHWN*/ || param.axis == 0/*NCHW*/)
+  CHECK(param.axis == 0/*CHWN*/ || param.axis == 1/*NCHW*/)
           << "Only NCHW and CHWN are supported for now";
   std::unordered_map<std::string, std::string> bcast_attrs;
   switch (param.axis) {
-    case 3: /*CHWN*/
+    case 0: /*CHWN*/
       bcast_attrs["layout"] = "CHWN";
       break;
-    case 0: /*NCHW*/
+    case 1: /*NCHW*/
     default:
       bcast_attrs["layout"] = "NCHW";
       break;
