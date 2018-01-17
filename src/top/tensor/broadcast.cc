@@ -75,8 +75,7 @@ So with `shape=(2,0)`, we will obtain the same result as in the above example.
 inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
                                  std::vector<TShape>* in_attrs,
                                  std::vector<TShape>* out_attrs) {
-  const BinaryBroadcastParam& param =
-          nnvm::get<BinaryBroadcastParam>(attrs.parsed);
+  const BinaryBroadcastParam& param = nnvm::get<BinaryBroadcastParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   const TShape& lhs = (*in_attrs)[0];
