@@ -102,7 +102,7 @@ if not use_mali:
     # run server locally
     host = 'localhost'
     port = 9092
-    server = rpc.Server(host=host, port=port)
+    server = rpc.Server(host=host, port=port, use_popen=True)
 
 ######################################################################
 # Prepare the Pretrained Model

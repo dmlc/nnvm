@@ -96,7 +96,7 @@ if not use_rasp:
     # run server locally
     host = 'localhost'
     port = 9091
-    server = rpc.Server(host=host, port=port)
+    server = rpc.Server(host=host, port=port, use_popen=True)
 
 ######################################################################
 # Prepare the Pretrained Model
