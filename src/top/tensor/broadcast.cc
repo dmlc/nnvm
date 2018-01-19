@@ -75,6 +75,7 @@ So with `shape=(2,0)`, we will obtain the same result as in the above example.
 inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
                                  std::vector<TShape>* in_attrs,
                                  std::vector<TShape>* out_attrs) {
+  const BinaryBroadcastParam& param = nnvm::get<BinaryBroadcastParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   const TShape& lhs = (*in_attrs)[0];
@@ -88,12 +89,25 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
     return true;
   }
   TShape out(std::max(lhs.ndim(), rhs.ndim()));
-  dim_t bl = out.ndim() - lhs.ndim();
-  dim_t br = out.ndim() - rhs.ndim();
+  dim_t bl;
+  dim_t br;
+  CHECK(param.layout == kNCHW || param.layout == kCHWN)
+          << "Only NCHW and CHWN are included for now. Add more if necessary ...";
+  switch (param.layout) {
+    case kCHWN:
+      bl = 0;
+      br = 0;
+      break;
+    case kNCHW:
+    default:
+      bl = out.ndim() - lhs.ndim();
+      br = out.ndim() - rhs.ndim();
+      break;
+  }
   for (dim_t i = 0; i < out.ndim(); ++i) {
     dim_t l = 1, r = 1;
-    if (i >= bl) l = lhs[i - bl];
-    if (i >= br) r = rhs[i - br];
+    if (i >= bl && i - bl < lhs.ndim()) l = lhs[i - bl];
+    if (i >= br && i - br < rhs.ndim()) r = rhs[i - br];
     if (l != r) {
       if (l == 0 || r == 0) {
         out[i] = 0;
@@ -111,18 +125,22 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+DMLC_REGISTER_PARAMETER(BinaryBroadcastParam);
 
-#define NNVM_REGISTER_BINARY_BROADCAST_OP(name)                     \
-  NNVM_REGISTER_OP(name)                                            \
-  .set_num_inputs(2)                                                \
-  .set_num_outputs(1)                                               \
-  .set_attr<FInferShape>("FInferShape", BinaryBroadcastShape)       \
-  .set_attr<FInferType>("FInferType", ElemwiseType<2, 1>)           \
-  .set_attr<FInplaceOption>("FInplaceOption",                       \
-    [](const NodeAttrs& attrs) {                                    \
-      return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};     \
-    })                                                              \
-  .add_argument("lhs", "Tensor", "first input")                     \
+#define NNVM_REGISTER_BINARY_BROADCAST_OP(name)                                   \
+  NNVM_REGISTER_OP(name)                                                          \
+  .set_num_inputs(2)                                                              \
+  .set_num_outputs(1)                                                             \
+  .add_arguments(BinaryBroadcastParam::__FIELDS__())                              \
+  .set_attr_parser(ParamParser<BinaryBroadcastParam>)                             \
+  .set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<BinaryBroadcastParam>) \
+  .set_attr<FInferShape>("FInferShape", BinaryBroadcastShape)                     \
+  .set_attr<FInferType>("FInferType", ElemwiseType<2, 1>)                         \
+  .set_attr<FInplaceOption>("FInplaceOption",                                     \
+    [](const NodeAttrs& attrs) {                                                  \
+      return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};                   \
+    })                                                                            \
+  .add_argument("lhs", "Tensor", "first input")                                   \
   .add_argument("rhs", "Tensor", "second input")
 
 
