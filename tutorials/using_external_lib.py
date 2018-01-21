@@ -7,7 +7,7 @@ This is a short tutorial on how to use external libraries such as cuDNN, or cuBL
 
 NNVM uses TVM internally to generate target specific code. For example, with cuda backend TVM generates cuda kernels for all layers in the user provided network.
 But sometimes it is also helpful to incorporate external libraries developed by various vendors into NNVM.
-Luckly, TVM has a mechanism to transparently call into these libraries.
+Luckily, TVM has a mechanism to transparently call into these libraries.
 For NNVM users, all we need to do is just to set a target string appropriately.
 
 Before we can use external libraries from NNVM, your TVM needs to be built with libraries you want to use.
@@ -215,4 +215,4 @@ np.testing.assert_allclose(out_cuda, out_cudnn, rtol=1e-5)
 #
 # Second, and more importantly, external libraries restrict the possibility of operator fusion during graph compilation, as shown above.
 # TVM and NNVM aim to achieve the best performance on a varity of hardwares, with joint operator level and graph level optimization.
-# To achieve this goal, we should continue developing better optimizations for TVM and NNVM,  rather than relying on vendor libraries.
+# To achieve this goal, we should continue developing better optimizations for TVM and NNVM, while using external libraries as a nice way to fall back to existing implementation when necessary.
