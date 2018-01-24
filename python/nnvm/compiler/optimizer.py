@@ -85,7 +85,7 @@ class SGD(Optimizer):
         lr_t = self._get_lr()
         for v, g in zip(variables, grads):
             if self.clip_gradient is not None:
-                g = sym.clip(g, a_min=-self.clip_gradient, a_max=self.clip_gradient)
+                g = sym.clip(g, a_min=-1 * self.clip_gradient, a_max=self.clip_gradient)
             updates.append(sym.assign(v, v - lr_t * (self.rescale_grad * g + self.wd * v)))
         return sym.Group(updates)
 
@@ -116,7 +116,7 @@ class Adam(Optimizer):
         lr_t = self._get_lr() * rate
         for variable, g, m, v in zip(variables, grads, self.m, self.v):
             if self.clip_gradient is not None:
-                g = sym.clip(g, a_min=self.clip_gradient, a_max=self.clip_gradient)
+                g = sym.clip(g, a_min=-1 * self.clip_gradient, a_max=self.clip_gradient)
             update_m = sym.assign(m, self.beta1 * m + (1 - self.beta1) * g)
             update_v = sym.assign(v, self.beta2 * v + (1 - self.beta2) * g * g)
             update_var = sym.assign(variable, variable - lr_t * (update_m / (sym.sqrt(update_v) \
