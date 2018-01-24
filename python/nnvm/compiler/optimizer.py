@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name, no-member, too-few-public-methods, too-many-arguments
+# pylint: disable=invalid-name, no-member, too-few-public-methods, too-many-arguments, too-many-locals
 """Optimizer API"""
 from . import graph_util
 from .. import symbol as sym
@@ -114,12 +114,12 @@ class Adam(Optimizer):
             self.v.append(sym.Variable(self.name + '_v' + str(i)))
         rate = sym.sqrt(1 - self.beta2 ** self.update_t) / (1 -  self.beta1 ** self.update_t)
         lr_t = self._get_lr() * rate
-        for var, g, m, v in zip(variables, grads, self.m, self.v):
+        for variable, g, m, v in zip(variables, grads, self.m, self.v):
             if self.clip_gradient is not None:
                 g = sym.clip(g, a_min=self.clip_gradient, a_max=self.clip_gradient)
             update_m = sym.assign(m, self.beta1 * m + (1 - self.beta1) * g)
             update_v = sym.assign(v, self.beta2 * v + (1 - self.beta2) * g * g)
-            update_var = sym.assign(var, var - lr_t * (update_m / (sym.sqrt(update_v)
-                                                                   + self.epsilon) + self.wd * var))
+            update_var = sym.assign(variable, variable - lr_t * (update_m / (sym.sqrt(update_v) \
+                         + self.epsilon) + self.wd * var))
             updates.append(update_var)
         return sym.Group(updates)
