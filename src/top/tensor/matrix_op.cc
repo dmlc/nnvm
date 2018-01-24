@@ -14,6 +14,7 @@ namespace nnvm {
 namespace top {
 
 DMLC_REGISTER_PARAMETER(MatMulParam);
+DMLC_REGISTER_PARAMETER(ClipParam);
 
 inline bool DotShape(const nnvm::NodeAttrs& attrs,
                      std::vector<TShape> *in_attrs,
