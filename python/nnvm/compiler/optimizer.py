@@ -120,6 +120,6 @@ class Adam(Optimizer):
             update_m = sym.assign(m, self.beta1 * m + (1 - self.beta1) * g)
             update_v = sym.assign(v, self.beta2 * v + (1 - self.beta2) * g * g)
             update_var = sym.assign(variable, variable - lr_t * (update_m / (sym.sqrt(update_v) \
-                         + self.epsilon) + self.wd * var))
+                         + self.epsilon) + self.wd * variable))
             updates.append(update_var)
         return sym.Group(updates)
