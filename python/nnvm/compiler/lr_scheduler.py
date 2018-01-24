@@ -32,7 +32,7 @@ class FactorScheduler(LRScheduler):
 
     It returns a new learning rate by::
 
-        base_lr * pow(factor, floor(num_update/step))
+        base_lr * pow(factor, num_update/step)
 
     Parameters
     ----------
