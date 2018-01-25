@@ -52,11 +52,6 @@ nnvm::Graph GraphFusePartition(nnvm::Graph g) {
     opt_level = g.MoveCopyAttr<int>("opt_level");
   }
 
-  int partition_disable = 0;
-  if (g.attrs.count("fuse_partition_disable") != 0) {
-    partition_disable = g.MoveCopyAttr<int>("fuse_partition_disable");
-  }
-
   // Get attributes from the graph
   const ShapeVector& shape_vec = g.GetAttr<ShapeVector>("shape");
 
@@ -82,9 +77,6 @@ nnvm::Graph GraphFusePartition(nnvm::Graph g) {
       fuse_vec[nid] = FuseRule::kRealize; continue;
     }
     TOpPattern pt = op_pattern.get(inode.source->op(), kOpaque);
-
-    if(partition_disable)
-      pt = kOpaque;
 
     if (pt <= kBroadcast) {
       // Try to check if we can fuse to the master.

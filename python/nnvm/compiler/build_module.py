@@ -28,8 +28,6 @@ class BuildConfig(object):
     defaults = {
         "opt_level": 2,
         "add_pass": None,
-        # Disabled fuse of operations whie compiling - Only for debugging purpose
-        "fuse_partition_disable" : 0,
     }
     def __init__(self, **kwargs):
         self._old_scope = None
@@ -235,7 +233,6 @@ def build(graph, target=None, shape=None, dtype="float32", params=None):
     else:
         graph._set_json_attr("opt_level", 0, "int")
     graph = graph.apply("InferShape").apply("InferType")
-    graph._set_json_attr('fuse_partition_disable', cfg.__getattr__('fuse_partition_disable'), 'int')
     with target:
         graph = graph.apply("GraphFusePartition").apply("GraphFuseCompile")
     libmod = graph_attr._move_out_module(graph, "module")
