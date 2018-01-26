@@ -98,23 +98,6 @@ GraphFunc GraphLower(Graph graph,
                      const NodeAttrs& schedule_op_attr);
 
 /*!
- * \brief Get schedule and its arguments
- *
- * \param graph The graph to be compiled
- * \param inputs The input specification.
- * \param target The build target
- * \param schedule_op_key The hint key for the schedule.
- * \param schedule_op_attr  The hint attribute for the schedule.
- *
- * \return schedule and its args
- */
-std::pair<Schedule, Array<tvm::Tensor>> GetScheduleArgs(Graph graph,
-                                                        const Array<tvm::Tensor> &inputs,
-                                                        const std::string &target,
-                                                        const Op* schedule_op_key,
-                                                        const NodeAttrs& schedule_op_attr);
-
-/*!
  * \brief Get type flag from TVM Type
  *
  * \param type the tvm type
