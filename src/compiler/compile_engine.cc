@@ -230,7 +230,7 @@ class CompileEngine {
       *outputs = outs;
 
     return std::make_pair(sch, all_args);
-  };
+  }
 
   // run the actual lowering process
   GraphFunc DoLower(Graph graph,
@@ -238,7 +238,6 @@ class CompileEngine {
                     const std::string& target,
                     const Op* schedule_op_key,
                     const NodeAttrs& schedule_op_attr) {
-
     std::string readable_name;
     Array<tvm::Tensor> all_args;
     Array<tvm::Tensor> outputs;
