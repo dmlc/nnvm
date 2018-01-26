@@ -82,8 +82,7 @@ class CompileEngine {
   GraphFunc Lower(Graph graph,
                   const Array<tvm::Tensor>& inputs,
                   const std::string& target,
-                  const Op* schedule_op_key,
-                  const NodeAttrs& schedule_op_attr) {
+                  int master_idx) {
     GraphKey key = GraphKeyNode::make(graph, inputs, target);
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = cache_.find(key);
@@ -91,13 +90,11 @@ class CompileEngine {
       ++(it->second->use_count);
       return it->second->graph_func;
     }
-    GraphFunc f = DoLower(key->graph, key->inputs, key->target,
-                          schedule_op_key, schedule_op_attr);
+    GraphFunc f = DoLower(key->graph, key->inputs, key->target, master_idx);
     std::shared_ptr<GraphCacheEntryNode> n = std::make_shared<GraphCacheEntryNode>();
     n->graph_func = f;
     n->use_count = 1;
-    n->schedule_op_name = schedule_op_key->name;
-    n->schedule_op_attr = schedule_op_attr;
+    n->master_idx = master_idx;
     cache_[key] = GraphCacheEntry(n);
     return f;
   }
@@ -138,13 +135,12 @@ class CompileEngine {
   }
 
   // get schedule and its args
-  std::pair<Schedule, Array<tvm::Tensor>> GetScheduleArgs(Graph graph,
-                                                          const Array<tvm::Tensor> &inputs,
-                                                          const std::string &target,
-                                                          const Op* schedule_op_key,
-                                                          const NodeAttrs schedule_op_attr,
-                                                          std::string *readable_name,
-                                                          Array<tvm::Tensor> *outputs) {
+  std::pair<Schedule, Array<tvm::Tensor> > GetScheduleArgs(Graph graph,
+                                                           const Array<tvm::Tensor> &inputs,
+                                                           const std::string &target,
+                                                           int master_idx,
+                                                           std::string *readable_name,
+                                                           Array<tvm::Tensor> *outputs) {
     // shape, type
     static auto& fcompute =
         nnvm::Op::GetAttr<FTVMCompute>("FTVMCompute");
@@ -221,7 +217,8 @@ class CompileEngine {
       all_args.push_back(t);
     }
 
-    Schedule sch = fschedule[schedule_op_key](schedule_op_attr, outs, target);
+    Schedule sch = fschedule[idx[master_idx].source->op()](
+        idx[master_idx].source->attrs, outs, target);
 
     // store extra return values
     if (readable_name != nullptr)
@@ -236,15 +233,14 @@ class CompileEngine {
   GraphFunc DoLower(Graph graph,
                     const Array<tvm::Tensor>& inputs,
                     const std::string& target,
-                    const Op* schedule_op_key,
-                    const NodeAttrs& schedule_op_attr) {
+                    int master_idx) {
     std::string readable_name;
     Array<tvm::Tensor> all_args;
     Array<tvm::Tensor> outputs;
     Schedule sch;
 
-    std::tie(sch, all_args) = GetScheduleArgs(graph, inputs, target, schedule_op_key,
-                                              schedule_op_attr, &readable_name, &outputs);
+    std::tie(sch, all_args) = GetScheduleArgs(graph, inputs, target, master_idx,
+                                              &readable_name, &outputs);
 
     std::shared_ptr<GraphFuncNode> gf = std::make_shared<GraphFuncNode>();
     gf->target = target;
@@ -286,19 +282,9 @@ class CompileEngine {
 GraphFunc GraphLower(Graph graph,
                      const Array<tvm::Tensor>& inputs,
                      const std::string& target,
-                     const Op* schedule_op_key,
-                     const NodeAttrs& schedule_op_attr) {
+                     int master_idx) {
   return CompileEngine::Global()->Lower(
-      graph, inputs, target, schedule_op_key, schedule_op_attr);
-}
-
-std::pair<Schedule, Array<tvm::Tensor>> GetScheduleArgs(Graph graph,
-                                                        const Array<tvm::Tensor> &inputs,
-                                                        const std::string &target,
-                                                        const Op* schedule_op_key,
-                                                        const NodeAttrs& schedule_op_attr) {
-  return CompileEngine::Global()->GetScheduleArgs(
-      graph, inputs, target, schedule_op_key, schedule_op_attr, nullptr, nullptr);
+      graph, inputs, target, master_idx);
 }
 
 // Expose cache to front end
@@ -333,6 +319,7 @@ TVM_REGISTER_GLOBAL("nnvm.compiler.MakeGraphKey")
     *rv = GraphKeyNode::make(args[0], args[1], args[2]);
   });
 
+// This can be used to extract workloads from nnvm compiler
 TVM_REGISTER_GLOBAL("nnvm.compiler.CacheItem2ScheduleArgs")
 .set_body([](TVMArgs args, TVMRetValue *rv) {
     Array<tvm::NodeRef> item = args[0];
@@ -344,13 +331,12 @@ TVM_REGISTER_GLOBAL("nnvm.compiler.CacheItem2ScheduleArgs")
     Graph graph = key->graph;
     const Array<tvm::Tensor> &inputs = key->inputs;
     std::string target = args[1];
-    const Op& op = ::dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(value->schedule_op_name);
-    const NodeAttrs &attr = value->schedule_op_attr;
+    int master_idx = value->master_idx;
 
     Schedule sch;
     Array<tvm::Tensor> all_args;
     std::tie(sch, all_args) = CompileEngine::Global()->GetScheduleArgs(
-        graph, inputs, target, &op, attr, nullptr, nullptr);
+        graph, inputs, target, master_idx, nullptr, nullptr);
 
     Array<tvm::NodeRef> ret;
     ret.push_back(sch);

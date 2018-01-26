@@ -56,15 +56,13 @@ struct GraphCacheEntryNode : public tvm::Node {
   GraphFunc graph_func;
   /*! \brief Usage statistics */
   int use_count{0};
-  /*! \brief Name of the root op to schedule */
-  std::string schedule_op_name;
-  /*! \brief Attrs of the node to schedule */
-  NodeAttrs schedule_op_attr;
+  /*! \brief Index of the master node for calling schedule*/
+  int master_idx;
 
   void VisitAttrs(tvm::AttrVisitor* v) final {
     v->Visit("graph_func", &graph_func);
     v->Visit("use_count", &use_count);
-    v->Visit("schedule_op_name", &schedule_op_name);
+    v->Visit("master_idx", &master_idx);
   }
   static constexpr const char* _type_key = "GraphCacheEntry";
   TVM_DECLARE_NODE_TYPE_INFO(GraphCacheEntryNode, tvm::Node);
@@ -86,16 +84,14 @@ class GraphCacheEntry : public ::tvm::NodeRef {
  * \param graph The graph to be compiled
  * \param inputs The input specification.
  * \param target The build target
- * \param schedule_op_key The hint key for the schedule.
- * \param schedule_op_attr  The hint attribute for the schedule.
+ * \param master_idx The index of master node for calling schedule
  *
  * \return func A lowered tvm function.
  */
 GraphFunc GraphLower(Graph graph,
                      const Array<tvm::Tensor>& inputs,
                      const std::string& target,
-                     const Op* schedule_op_key,
-                     const NodeAttrs& schedule_op_attr);
+                     int master_idx);
 
 /*!
  * \brief Get type flag from TVM Type
