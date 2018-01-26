@@ -96,6 +96,8 @@ class CompileEngine {
     std::shared_ptr<GraphCacheEntryNode> n = std::make_shared<GraphCacheEntryNode>();
     n->graph_func = f;
     n->use_count = 1;
+    n->schedule_op_name = schedule_op_key->name;
+    n->schedule_op_attr = schedule_op_attr;
     cache_[key] = GraphCacheEntry(n);
     return f;
   }
@@ -134,12 +136,15 @@ class CompileEngine {
     std::lock_guard<std::mutex> lock(mutex_);
     cache_.clear();
   }
-  // run the actual lowering process
-  GraphFunc DoLower(Graph graph,
-                    const Array<tvm::Tensor>& inputs,
-                    const std::string& target,
-                    const Op* schedule_op_key,
-                    const NodeAttrs& schedule_op_attr) {
+
+  // get schedule and its args
+  std::pair<Schedule, Array<tvm::Tensor>> GetScheduleArgs(Graph graph,
+                                                          const Array<tvm::Tensor> &inputs,
+                                                          const std::string &target,
+                                                          const Op* schedule_op_key,
+                                                          const NodeAttrs schedule_op_attr,
+                                                          std::string *readable_name,
+                                                          Array<tvm::Tensor> *outputs) {
     // shape, type
     static auto& fcompute =
         nnvm::Op::GetAttr<FTVMCompute>("FTVMCompute");
@@ -172,18 +177,18 @@ class CompileEngine {
       tensor_vec[idx.entry_id(nid, 0)] = inputs[i];
     }
 
-    std::ostringstream readable_name;
-    readable_name << "fuse";
+    std::ostringstream readable_name_os;
+    readable_name_os << "fuse";
     for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
       const auto& inode = idx[nid];
       if (inode.source->is_variable()) continue;
-      Array<Tensor> inputs, out_info;
-      readable_name << "_" << inode.source->op()->name;
+      Array<Tensor> op_inputs, out_info;
+      readable_name_os << "_" << inode.source->op()->name;
       // input array
       for (const IndexedGraph::NodeEntry& e : inode.inputs) {
         const tvm::Tensor& t = tensor_vec[idx.entry_id(e)];
         CHECK(t.defined());
-        inputs.push_back(t);
+        op_inputs.push_back(t);
       }
       // output hint
       for (uint32_t i = 0; i < inode.source->num_outputs(); ++i) {
@@ -198,7 +203,7 @@ class CompileEngine {
       }
       // get default
       Array<Tensor> out = fcompute[inode.source->op()](
-          inode.source->attrs, inputs, out_info);
+          inode.source->attrs, op_inputs, out_info);
       CHECK_EQ(out.size(), inode.source->num_outputs());
       // schedule on root node, and use master's schedule
       for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
@@ -207,19 +212,44 @@ class CompileEngine {
       }
     }
     // Schedule on final output.
-    Array<Tensor> outputs;
     Array<Tensor> all_args = inputs;
+    Array<Tensor> outs;
     for (const IndexedGraph::NodeEntry& e : idx.outputs()) {
       const tvm::Tensor& t = tensor_vec[idx.entry_id(e)];
       CHECK(t.defined());
-      outputs.push_back(t);
+      outs.push_back(t);
       all_args.push_back(t);
     }
-    Schedule sch = fschedule[schedule_op_key](
-        schedule_op_attr, outputs, target);
+
+    Schedule sch = fschedule[schedule_op_key](schedule_op_attr, outs, target);
+
+    // store extra return values
+    if (readable_name != nullptr)
+      *readable_name = readable_name_os.str();
+    if (outputs != nullptr)
+      *outputs = outs;
+
+    return std::make_pair(sch, all_args);
+  };
+
+  // run the actual lowering process
+  GraphFunc DoLower(Graph graph,
+                    const Array<tvm::Tensor>& inputs,
+                    const std::string& target,
+                    const Op* schedule_op_key,
+                    const NodeAttrs& schedule_op_attr) {
+
+    std::string readable_name;
+    Array<tvm::Tensor> all_args;
+    Array<tvm::Tensor> outputs;
+    Schedule sch;
+
+    std::tie(sch, all_args) = GetScheduleArgs(graph, inputs, target, schedule_op_key,
+                                              schedule_op_attr, &readable_name, &outputs);
+
     std::shared_ptr<GraphFuncNode> gf = std::make_shared<GraphFuncNode>();
     gf->target = target;
-    gf->func_name = GetUniqeName(readable_name.str());
+    gf->func_name = GetUniqeName(readable_name);
     gf->inputs = inputs;
     gf->outputs = outputs;
     static const PackedFunc& flower = GetPackedFunc("nnvm.compiler.lower");
@@ -261,6 +291,15 @@ GraphFunc GraphLower(Graph graph,
                      const NodeAttrs& schedule_op_attr) {
   return CompileEngine::Global()->Lower(
       graph, inputs, target, schedule_op_key, schedule_op_attr);
+}
+
+std::pair<Schedule, Array<tvm::Tensor>> GetScheduleArgs(Graph graph,
+                                                        const Array<tvm::Tensor> &inputs,
+                                                        const std::string &target,
+                                                        const Op* schedule_op_key,
+                                                        const NodeAttrs& schedule_op_attr) {
+  return CompileEngine::Global()->GetScheduleArgs(
+      graph, inputs, target, schedule_op_key, schedule_op_attr, nullptr, nullptr);
 }
 
 // Expose cache to front end
