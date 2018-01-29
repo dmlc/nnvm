@@ -106,7 +106,6 @@ def schedule_dense(_, outs, target):
 
 reg.register_pattern("dense", OpPattern.OUT_ELEMWISE_FUSABLE)
 
-
 # conv2d
 @reg.register_compute("conv2d")
 def compute_conv2d(attrs, inputs, _):
