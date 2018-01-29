@@ -604,6 +604,7 @@ NNVM_REGISTER_ELEMWISE_REDUCE_OP(elemwise_sum)
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
     CHECK_EQ(ograds.size(), 1);
+    const ElementWiseReduceParam& param = nnvm::get<ElementWiseReduceParam>(n->attrs.parsed);
     std::vector<NodeEntry> ret;
     for (size_t i = 0; i < n->inputs.size(); i++) {
       ret.push_back(MakeNode("copy", n->attrs.name + "_grad_0", {ograds[0]}));
@@ -674,7 +675,6 @@ with 1.0 if the value is minimum over given axes, otherwise 0.0 element-wise.
 .set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<IndicatorParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_support_level(1);
-
 
 DMLC_REGISTER_PARAMETER(ClipParam);
 

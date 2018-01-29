@@ -233,10 +233,10 @@ struct MatMulParam : public dmlc::Parameter<MatMulParam> {
 
   DMLC_DECLARE_PARAMETER(MatMulParam) {
     DMLC_DECLARE_FIELD(transpose_a)
-      .describe("If true then transpose the first input before dot.")
+      .describe("If true then transpose the first input before matmul.")
       .set_default(false);
     DMLC_DECLARE_FIELD(transpose_b)
-      .describe("If true then transpose the second input before dot.")
+      .describe("If true then transpose the second input before matmul.")
       .set_default(false);
   }
 };
