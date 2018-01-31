@@ -401,6 +401,7 @@ class GraphProto(object):
             op_name = node.op_type
             attr = self._parse_attr(node.attribute)
             inputs = [self._nodes[self._renames.get(i, i)] for i in node.input]
+            inputs = self._fix_extranodes(op_name, attr, inputs)
             op = self._convert_operator(op_name, inputs, attr)
             node_output = self._fix_outputs(op_name, node.output)
             assert len(node_output) == len(op.list_output_names()), (
@@ -500,6 +501,16 @@ class GraphProto(object):
             outputs = outputs[:-1]
         return outputs
 
+    def _fix_extranodes(self, op_name, attr, inputs):
+        if op_name == "Softmax":
+            # Require flatten of data before it goes to softmax
+            op = AttrCvt(op_name='flatten')(inputs, {})
+            node_output = op.list_output_names()
+            for k, i in zip(list(node_output), range(len(node_output))):
+                self._nodes[k] = op[i]
+            inputs = [op]
+
+        return inputs
 
 def from_onnx(graph):
     """Load onnx graph which is a python protobuf object into nnvm graph.
