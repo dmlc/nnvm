@@ -45,90 +45,90 @@ _fschedule_elemwise = _fschedule_injective
 # copy
 reg.register_compute("copy", _compute_unary(topi.identity))
 reg.register_pattern("copy", OpPattern.ELEMWISE)
-reg.register_schedule("copy", _fschedule_broadcast)
+reg.register_schedule("copy", _fschedule_elemwise)
 
 # exp
 reg.register_compute("exp", _compute_unary(topi.exp))
 reg.register_pattern("exp", OpPattern.ELEMWISE)
-reg.register_schedule("exp", _fschedule_broadcast)
+reg.register_schedule("exp", _fschedule_elemwise)
 
 # sqrt
 reg.register_compute("sqrt", _compute_unary(topi.sqrt))
 reg.register_pattern("sqrt", OpPattern.ELEMWISE)
-reg.register_schedule("sqrt", _fschedule_broadcast)
+reg.register_schedule("sqrt", _fschedule_elemwise)
 
 # log
 reg.register_compute("log", _compute_unary(topi.log))
 reg.register_pattern("log", OpPattern.ELEMWISE)
-reg.register_schedule("log", _fschedule_broadcast)
+reg.register_schedule("log", _fschedule_elemwise)
 
 # tanh
 reg.register_compute("tanh", _compute_unary(topi.tanh))
 reg.register_pattern("tanh", OpPattern.ELEMWISE)
-reg.register_schedule("tanh", _fschedule_broadcast)
+reg.register_schedule("tanh", _fschedule_elemwise)
 
 # negative
 reg.register_compute("negative", _compute_unary(topi.negative))
 reg.register_pattern("negative", OpPattern.ELEMWISE)
-reg.register_schedule("negative", _fschedule_broadcast)
+reg.register_schedule("negative", _fschedule_elemwise)
 
 # sigmoid
 reg.register_compute("sigmoid", _compute_unary(topi.sigmoid))
 reg.register_pattern("sigmoid", OpPattern.ELEMWISE)
-reg.register_schedule("sigmoid", _fschedule_broadcast)
+reg.register_schedule("sigmoid", _fschedule_elemwise)
 
 # add_scalar
 reg.register_compute("__add_scalar__",
                      _compute_binary_scalar(lambda x, y: x + y))
 reg.register_pattern("__add_scalar__", OpPattern.ELEMWISE)
-reg.register_schedule("__add_scalar__", _fschedule_broadcast)
+reg.register_schedule("__add_scalar__", _fschedule_elemwise)
 
 # sub_calar
 reg.register_compute("__sub_scalar__",
                      _compute_binary_scalar(lambda x, y: x - y))
 reg.register_pattern("__sub_scalar__", OpPattern.ELEMWISE)
-reg.register_schedule("__sub_scalar__", _fschedule_broadcast)
+reg.register_schedule("__sub_scalar__", _fschedule_elemwise)
 
 # rsub_scalar
 reg.register_compute("__rsub_scalar__",
                      _compute_binary_scalar(lambda x, y: y - x))
 reg.register_pattern("__rsub_scalar__", OpPattern.ELEMWISE)
-reg.register_schedule("__rsub_scalar__", _fschedule_broadcast)
+reg.register_schedule("__rsub_scalar__", _fschedule_elemwise)
 
 # mul_scalar
 reg.register_compute("__mul_scalar__",
                      _compute_binary_scalar(lambda x, y: x * y))
 reg.register_pattern("__mul_scalar__", OpPattern.ELEMWISE)
-reg.register_schedule("__mul_scalar__", _fschedule_broadcast)
+reg.register_schedule("__mul_scalar__", _fschedule_elemwise)
 
 # div_scalar
 reg.register_compute("__div_scalar__",
                      _compute_binary_scalar(lambda x, y: x / y))
 reg.register_pattern("__div_scalar__", OpPattern.ELEMWISE)
-reg.register_schedule("__div_scalar__", _fschedule_broadcast)
+reg.register_schedule("__div_scalar__", _fschedule_elemwise)
 
 # rdiv_scalar
 reg.register_compute("__rdiv_scalar__",
                      _compute_binary_scalar(lambda x, y: y / x))
 reg.register_pattern("__rdiv_scalar__", OpPattern.ELEMWISE)
-reg.register_schedule("__rdiv_scalar__", _fschedule_broadcast)
+reg.register_schedule("__rdiv_scalar__", _fschedule_elemwise)
 
 # pow_scalar
 reg.register_compute("__pow_scalar__",
                      _compute_binary_scalar(tvm.power))
 reg.register_pattern("__pow_scalar__", OpPattern.ELEMWISE)
-reg.register_schedule("__pow_scalar__", _fschedule_broadcast)
+reg.register_schedule("__pow_scalar__", _fschedule_elemwise)
 
 # rpow_scalar
 reg.register_compute("__rpow_scalar__",
                      _compute_binary_scalar(lambda x, y: tvm.power(y, x)))
 reg.register_pattern("__rpow_scalar__", OpPattern.ELEMWISE)
-reg.register_schedule("__rpow_scalar__", _fschedule_broadcast)
+reg.register_schedule("__rpow_scalar__", _fschedule_elemwise)
 
 # elemwise_add
 reg.register_compute("elemwise_add", _compute_binary(topi.broadcast_add))
 reg.register_pattern("elemwise_add", OpPattern.BROADCAST)
-reg.register_schedule("elemwise_add", _fschedule_broadcast)
+reg.register_schedule("elemwise_add", _fschedule_elemwise)
 
 # elemwise_sub
 reg.register_compute("elemwise_sub", _compute_binary(topi.broadcast_sub))
@@ -168,7 +168,120 @@ reg.register_schedule("broadcast_div", _fschedule_broadcast)
 # broadcast_to
 @reg.register_compute("broadcast_to")
 def compute_broadcast_to(attrs, inputs, out_info):
-    """Compute definition of softmax"""
+    """Compute definition of broadcast_to"""
     return topi.broadcast_to(inputs[0], shape=out_info[0].shape)
 reg.register_pattern("broadcast_to", OpPattern.BROADCAST)
 reg.register_schedule("broadcast_to", _fschedule_broadcast)
+
+# matmul
+@reg.register_compute("matmul")
+def compute_matmul(attrs, inputs, out_info):
+    """Compute definition of matmul"""
+    transpose_a = attrs.get_bool("transpose_a")
+    transpose_b = attrs.get_bool("transpose_b")
+    return topi.math.matmul(inputs[0], inputs[1], transpose_a, transpose_b)
+reg.register_pattern("matmul", OpPattern.INJECTIVE)
+reg.register_schedule("matmul", _fschedule_injective)
+
+# elemwise sum
+@reg.register_compute("elemwise_sum")
+def compute_elemwise_sum(attrs, inputs, out_info):
+    """Compute definition of elemwise sum"""
+    num_args = attrs.get_int("num_args")
+    assert num_args == len(inputs), "Number of tensors does not match num_args."
+    return topi.tensor.elemwise_sum(inputs, num_args)
+reg.register_pattern("elemwise_sum", OpPattern.ELEMWISE)
+reg.register_schedule("elemwise_sum", _fschedule_elemwise)
+
+# full
+@reg.register_compute("full")
+def compute_full(attrs, inputs, out_info):
+    """Compute definition of full"""
+    shape = attrs.get_int_tuple("shape")
+    dtype = attrs.get_string("dtype")
+    fill_value = attrs.get_float("fill_value")
+    return topi.tensor.full(shape, dtype, fill_value)
+reg.register_pattern("full", OpPattern.OUT_ELEMWISE_FUSABLE)
+reg.register_schedule("full", _fschedule_elemwise)
+
+# full_like
+@reg.register_compute("full_like")
+def compute_elemwise_sum(attrs, inputs, out_info):
+    """Compute definition of full_like"""
+    fill_value = attrs.get_float("fill_value")
+    return topi.tensor.full_like(inputs[0], fill_value)
+reg.register_pattern("full_like", OpPattern.ELEMWISE)
+reg.register_schedule("full_like", _fschedule_elemwise)
+
+# zeros
+@reg.register_compute("zeros")
+def compute_zeros(attrs, inputs, out_info):
+    """Compute definition of zeros"""
+    shape = attrs.get_int_tuple("shape")
+    dtype = attrs.get_string("dtype")
+    return topi.tensor.full(shape, dtype, 0)
+reg.register_pattern("zeros", OpPattern.OUT_ELEMWISE_FUSABLE)
+reg.register_schedule("zeros", _fschedule_elemwise)
+
+# zeros_like
+@reg.register_compute("zeros_like")
+def compute_zeros_like(attrs, inputs, out_info):
+    """Compute definition of zeros_like"""
+    return topi.tensor.full_like(inputs[0], 0)
+reg.register_pattern("zeros_like", OpPattern.ELEMWISE)
+reg.register_schedule("zeros_like", _fschedule_elemwise)
+
+# ones
+@reg.register_compute("ones")
+def compute_ones(attrs, inputs, out_info):
+    """Compute definition of ones"""
+    shape = attrs.get_int_tuple("shape")
+    dtype = attrs.get_string("dtype")
+    #tvm.tensor.Tensor()
+    return topi.tensor.full(shape, dtype, 1)
+reg.register_pattern("ones", OpPattern.OUT_ELEMWISE_FUSABLE)
+reg.register_schedule("ones", _fschedule_elemwise)
+
+# ones_like
+@reg.register_compute("ones_like")
+def compute_ones_like(attrs, inputs, out_info):
+    """Compute definition of ones_like"""
+    return topi.tensor.full_like(inputs[0], 1)
+reg.register_pattern("ones_like", OpPattern.ELEMWISE)
+reg.register_schedule("ones_like", _fschedule_elemwise)
+
+# clip
+@reg.register_compute("clip")
+def compute_clip(attrs, inputs, out_info):
+    """Compute definition of clip"""
+    a_min = attrs.get_float("a_min")
+    a_max = attrs.get_float("a_max")
+    return topi.math.clip(inputs[0], a_min, a_max)
+reg.register_pattern("clip", OpPattern.ELEMWISE)
+reg.register_schedule("clip", _fschedule_elemwise)
+
+# greater
+@reg.register_compute("greater")
+def compute_greater(attrs, inputs, out_info):
+    """Compute definition of greater"""
+    return topi.tensor.indicator(inputs[0], inputs[1], lambda lhs, rhs: lhs > rhs)
+reg.register_pattern("greater", OpPattern.ELEMWISE)
+reg.register_schedule("greater", _fschedule_elemwise)
+
+# less
+@reg.register_compute("less")
+def compute_less(attrs, inputs, out_info):
+    """Compute definition of less"""
+    return topi.tensor.indicator(inputs[0], inputs[1], lambda lhs, rhs: lhs < rhs)
+reg.register_pattern("less", OpPattern.ELEMWISE)
+reg.register_schedule("less", _fschedule_elemwise)
+
+# block_grad
+reg.register_compute("block_grad", _compute_unary(topi.identity))
+reg.register_pattern("block_grad", OpPattern.ELEMWISE)
+reg.register_schedule("block_grad", _fschedule_elemwise)
+
+# assign
+reg.register_compute("assign", lambda attrs, inputs, out_info: topi.identity(inputs[1]))
+reg.register_pattern("assign", OpPattern.ELEMWISE)
+reg.register_schedule("assign", _fschedule_elemwise)

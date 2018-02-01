@@ -15,7 +15,7 @@ namespace top {
 
 DMLC_REGISTER_PARAMETER(MatMulParam);
 
-inline bool DotShape(const nnvm::NodeAttrs& attrs,
+inline bool MatMulShape(const nnvm::NodeAttrs& attrs,
                      std::vector<TShape> *in_attrs,
                      std::vector<TShape> *out_attrs) {
   const MatMulParam& param = nnvm::get<MatMulParam>(attrs.parsed);
@@ -26,16 +26,15 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
 
   if (lshape.ndim() == 1)  lshape = TShape{1, lshape[0]};
   if (rshape.ndim() == 1) rshape = TShape{1, rshape[0]};
-
   if (param.transpose_a) std::reverse(lshape.begin(), lshape.end());
   if (param.transpose_b) std::reverse(rshape.begin(), rshape.end());
 
   CHECK_EQ(lshape[lshape.ndim() - 1], rshape[0])
-    << "dot shape inconsistent: " << lshape << " X " << rshape;
+    << "matmul shape inconsistent: " << lshape << " X " << rshape;
 
-  TShape oshape(lshape.ndim() + rshape.ndim() - 1);
+  TShape oshape(lshape.ndim() + rshape.ndim() - 2);
   for (int i = 0; i < lshape.ndim() - 1; i++) oshape[i] = lshape[i];
-  for (int i = 1; i < rshape.ndim(); i++) oshape[i + lshape.ndim() - 1] = rshape[i];
+  for (int i = 1; i < rshape.ndim(); i++) oshape[i + lshape.ndim() - 2] = rshape[i];
 
   NNVM_ASSIGN_OUTPUT_SHAPE(attrs, *out_attrs, 0, oshape);
   return true;
@@ -44,9 +43,8 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
 NNVM_REGISTER_OP(matmul)
   .describe(R"doc(Matrix multiplication of two arrays.
 
-``dot``'s behavior depends on the input array dimensions:
+``matmul``'s behavior depends on the input array dimensions:
 
-- 1-D arrays: inner product of vectors
 - 2-D arrays: matrix multiplication
 - N-D arrays: a sum product over the last axis of the first input and the first
   axis of the second input
@@ -54,7 +52,9 @@ NNVM_REGISTER_OP(matmul)
   For example, given 3-D ``x`` with shape `(n,m,k)` and ``y`` with shape `(k,r,s)`, the
   result array will have shape `(n,m,r,s)`. It is computed by::
 
-    dot(x,y) = sum(x[i,j,:]*y[:,a,b])
+    matmul(x,y) = sum(x[i,j,:]*y[:,a,b])
+
+**Note** matmul gradient is only supported for 2d matrix
 
 )doc" NNVM_ADD_FILELINE)
 .set_support_level(1)
@@ -65,7 +65,7 @@ NNVM_REGISTER_OP(matmul)
 .add_arguments(MatMulParam::__FIELDS__())
 .add_argument("lhs", "NDArray-or-Symbol", "The first input")
 .add_argument("rhs", "NDArray-or-Symbol", "The second input")
-.set_attr<FInferShape>("FInferShape", DotShape)
+.set_attr<FInferShape>("FInferShape", MatMulShape)
 .set_attr<FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,

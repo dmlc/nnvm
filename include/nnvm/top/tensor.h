@@ -233,11 +233,21 @@ struct MatMulParam : public dmlc::Parameter<MatMulParam> {
 
   DMLC_DECLARE_PARAMETER(MatMulParam) {
     DMLC_DECLARE_FIELD(transpose_a)
-      .describe("If true then transpose the first input before dot.")
+      .describe("If true then transpose the first input before matmul.")
       .set_default(false);
     DMLC_DECLARE_FIELD(transpose_b)
-      .describe("If true then transpose the second input before dot.")
+      .describe("If true then transpose the second input before matmul.")
       .set_default(false);
+  }
+};
+
+struct ClipParam : public dmlc::Parameter<ClipParam> {
+  double a_min, a_max;
+  DMLC_DECLARE_PARAMETER(ClipParam) {
+    DMLC_DECLARE_FIELD(a_min)
+      .describe("Minimum value such that value smaller then this will be clipped.");
+    DMLC_DECLARE_FIELD(a_max)
+      .describe("Maximum value such that value larger then this will be clipped.");
   }
 };
 

@@ -27,6 +27,8 @@ This level enables fully connected multi-layer perceptron.
 .. autosummary::
    :nosignatures:
 
+   nnvm.symbol.assign
+   nnvm.symbol.clip
    nnvm.symbol.dense
    nnvm.symbol.matmul
    nnvm.symbol.relu
@@ -57,7 +59,8 @@ This level enables fully connected multi-layer perceptron.
    nnvm.symbol.log_softmax
    nnvm.symbol.pad
    nnvm.symbol.block_grad
-   nnvm.symbol.indicator
+   nnvm.symbol.greater
+   nnvm.symbol.less
 
 
 **Level 2: Convolutions**
@@ -112,6 +115,8 @@ This level enables typical convnet models.
 
 Detailed Definitions
 --------------------
+.. autofunction:: nnvm.symbol.assign
+.. autofunction:: nnvm.symbol.clip
 .. autofunction:: nnvm.symbol.dense
 .. autofunction:: nnvm.symbol.matmul
 .. autofunction:: nnvm.symbol.relu
@@ -142,7 +147,8 @@ Detailed Definitions
 .. autofunction:: nnvm.symbol.log_softmax
 .. autofunction:: nnvm.symbol.pad
 .. autofunction:: nnvm.symbol.block_grad
-.. autofunction:: nnvm.symbol.indicator
+.. autofunction:: nnvm.symbol.greater
+.. autofunction:: nnvm.symbol.less
 
 .. autofunction:: nnvm.symbol.conv2d
 .. autofunction:: nnvm.symbol.conv2d_transpose

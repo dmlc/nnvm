@@ -178,8 +178,8 @@ inline bool ExpandDimsInferShape(const NodeAttrs& attrs,
 NNVM_REGISTER_OP(expand_dims)
 .describe(R"code(Inserts a new axis of size 1 into the array shape
 
-For example, given ``x`` with shape ``(2,3,4)``, then ``expand_dims(x, axis=1, num_newaxis=5)``
-will return a new array with shape ``(2,5,3,4)``.
+For example, given ``x`` with shape ``(2,3,4)``, then ``expand_dims(x, axis=1, num_newaxis=2)``
+will return a new array with shape ``(2,1,1,3,4)``.
 
 )code" NNVM_ADD_FILELINE)
 .add_argument("data", "Tensor", "Input tensor")
@@ -223,9 +223,9 @@ Examples::
 )code" NNVM_ADD_FILELINE)
 .add_argument("input", "Tensor", "Source input")
 .add_argument("shape_like", "Tensor", "Input with new shape")
-.add_arguments(ReduceParam::__FIELDS__())
-.set_attr_parser(ParamParser<ReduceParam>)
-.set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<ReduceParam>)
+.add_arguments(IndicatorParam::__FIELDS__())
+.set_attr_parser(ParamParser<IndicatorParam>)
+.set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<IndicatorParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", AssignOutputAttr<TShape, 1, 0>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_num_inputs(2)
@@ -233,7 +233,7 @@ Examples::
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds) {
-    const ReduceParam& param = nnvm::get<ReduceParam>(n->attrs.parsed);
+    const IndicatorParam& param = nnvm::get<IndicatorParam>(n->attrs.parsed);
     std::ostringstream axis;
     axis << param.axis;
 
@@ -241,8 +241,8 @@ Examples::
       MakeNode("sum", n->attrs.name + "_grad",
                {ograds[0]},
                {{"axis", axis.str()},
-                {"keepdims", std::to_string(param.keepdims)},
-                {"exclude", std::to_string(param.exclude)}})
+                {"exclude", std::to_string(param.exclude)}}),
+      MakeNode("zeros_like", n->attrs.name + "_zero_grad", {n->inputs[1]})
     };
 })
 .set_support_level(1);
@@ -526,7 +526,7 @@ the input array into an output array with the same shape as the second input arr
 )code" NNVM_ADD_FILELINE)
 .add_argument("data", "Tensor", "Input data.")
 .add_argument("shape_like", "Tensor", "Input data.")
-.set_num_inputs(1)
+.set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<FInferShape>(
   "FInferShape", [](const NodeAttrs& attrs,
@@ -537,12 +537,14 @@ the input array into an output array with the same shape as the second input arr
     NNVM_ASSIGN_OUTPUT_SHAPE(attrs, *out_attrs, 0, in_attrs->at(1));
     return true;
 })
-.set_attr<FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds) {
-    return MakeGradNode("reshape_like", n,
-                        {ograds[0], n->inputs[0]});
+    return std::vector<NodeEntry>{
+      MakeNode("reshape_like", n->attrs.name + "_grad", {ograds[0], n->inputs[0]}),
+      MakeNode("zeros_like", n->attrs.name + "_zero_grad", { n->inputs[1]})
+    };
 })
 .set_support_level(3);
 
@@ -624,7 +626,8 @@ Examples::
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds) {
     return std::vector<NodeEntry>{
-      MakeNode("reshape_like", n->attrs.name + "_grad", {n->inputs[0]})
+      MakeNode("reshape_like", n->attrs.name + "_grad",
+               {ograds[0], n->inputs[0]})
     };
 })
 .set_support_level(1);

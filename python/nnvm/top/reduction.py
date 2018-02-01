@@ -21,9 +21,11 @@ def _compute_reduce(f):
     def _compute(attrs, inputs, out_info):
         axis = attrs.get_int_tuple("axis")
         keepdims = attrs.get_bool("keepdims")
+        exclude = attrs.get_bool("exclude")
+
         if axis:
-            return f(inputs[0], axis=axis, keepdims=keepdims)
-        return f(inputs[0], keepdims=keepdims)
+            return f(inputs[0], axis=axis, keepdims=keepdims, exclude=exclude)
+        return f(inputs[0], keepdims=keepdims, exclude=exclude)
     return _compute
 
 # sum
