@@ -2,7 +2,6 @@
 """Tensor transformation ops"""
 from __future__ import absolute_import
 
-import topi
 from .tensor import _fschedule_broadcast, _fschedule_injective
 from . import registry as reg
 from .registry import OpPattern
