@@ -550,9 +550,7 @@ The significance of each is explained below:
   "FTVMCompute", [](const NodeAttrs& attrs,
                     const Array<Tensor>& inputs,
                     const Array<Tensor>& out_info) {
-    const ReshapeParam& param = nnvm::get<ReshapeParam>(attrs.parsed);
-    auto new_shape = ShapeToArray(param.shape);
-    return Array<Tensor>{ topi::reshape(inputs[0], new_shape) };
+    return Array<Tensor>{ topi::reshape(inputs[0], out_info[0]->shape) };
 })
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
