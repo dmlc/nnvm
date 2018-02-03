@@ -387,7 +387,7 @@ DMLC_REGISTER_PARAMETER(ScalarParam);
   .set_attr_parser(ParamParser<ScalarParam>)                            \
   .set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<ScalarParam>)
 
-inline Tensor binary_scalar_op(const NodeAttrs& attrs, 
+inline Tensor binary_scalar_op(const NodeAttrs& attrs,
                                const Tensor& x,
                                std::function<Expr(Expr, Expr)> f) {
   const ScalarParam& param = nnvm::get<ScalarParam>(attrs.parsed);
