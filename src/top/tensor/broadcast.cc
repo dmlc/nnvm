@@ -142,7 +142,7 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
       const Array<Tensor>& inputs,                                  \
       const Array<Tensor>& out_info) {                              \
         return Array<Tensor>{                                       \
-          topi::##name(inputs[0], inputs[1]) };                     \
+          topi::name(inputs[0], inputs[1]) };                       \
     })                                                              \
   .add_argument("lhs", "Tensor", "first input")                     \
   .add_argument("rhs", "Tensor", "second input")
