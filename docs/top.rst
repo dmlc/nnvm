@@ -59,6 +59,7 @@ This level enables fully connected multi-layer perceptron.
    nnvm.symbol.block_grad
    nnvm.symbol.indicator
    nnvm.symbol.clip
+   nnvm.symbol.assign
 
 
 **Level 2: Convolutions**
@@ -145,6 +146,7 @@ Detailed Definitions
 .. autofunction:: nnvm.symbol.block_grad
 .. autofunction:: nnvm.symbol.indicator
 .. autofunction:: nnvm.symbol.clip
+.. autofunction:: nnvm.symbol.assign
 
 .. autofunction:: nnvm.symbol.conv2d
 .. autofunction:: nnvm.symbol.conv2d_transpose

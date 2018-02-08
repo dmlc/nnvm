@@ -8,15 +8,14 @@ from nnvm.testing.config import ctx_list
 
 
 def helper(symbol, inputs, dtype,
-           np_forward, np_backward=None):
+           np_forward, np_backward=None, need_input=True, need_head_grads=True):
     ishapes = {}
     input_syms = []
     np_inputs = {}
-    for (k, v) in inputs.items():
-        ishapes.update({k: v[0]})
-        np_inputs.update({k: np.random.uniform(size=v[0]).astype(dtype)})
-        if len(v) > 1:
-            input_syms.append(v[1])
+    for (name, shape, s) in inputs:
+        ishapes.update({name: shape})
+        np_inputs.update({name: np.random.uniform(size=shape).astype(dtype)})
+        input_syms.append(s)
 
     for target, ctx in ctx_list():
         graph, lib, _ = nnvm.compiler.build(symbol, target, ishapes)
@@ -25,23 +24,26 @@ def helper(symbol, inputs, dtype,
         y_np = np_forward(**np_inputs)
         out = m.get_output(0, tvm.nd.empty(y_np.shape, dtype))
         np.testing.assert_allclose(out.asnumpy(), y_np, atol=1e-5, rtol=1e-5)
-
         # backward
         if np_backward:
             graph._set_symbol_list_attr("grad_ys", symbol)
-            for x in input_syms:
-                graph._set_symbol_list_attr("grad_xs", x)
-            graph._set_symbol_list_attr("grad_ys_out_grad", sym.Variable("head_grads"))
+            graph._set_symbol_list_attr("grad_xs", input_syms)
+            graph._set_symbol_list_attr("grad_ys_out_grad", sym.Variable("head_grads", shape=y_np.shape))
             graph = graph.apply("Gradient")
             ishapes.update({"head_grads": y_np.shape})
             graph, lib, _ = nnvm.compiler.build(graph, target, ishapes)
             m = graph_runtime.create(graph, lib, ctx)
             head_grads = np.random.uniform(size=y_np.shape).astype(dtype)
-            y_np = head_grads * np_backward(**np_inputs)
-            m.run(head_grads=head_grads, **np_inputs)
-            out = m.get_output(0, tvm.nd.empty(y_np.shape, dtype))
-
-            np.testing.assert_allclose(out.asnumpy(), y_np, atol=1e-5, rtol=1e-5)
+            y_np = np_backward(head_grads=head_grads, **np_inputs)
+            b_inputs = {}
+            if need_input:
+                b_inputs.update(np_inputs)
+            if need_head_grads:
+                b_inputs.update({"head_grads":head_grads})
+            m.run(**b_inputs)
+            for i in range(len(y_np)):
+                out = m.get_output(i, tvm.nd.empty(y_np[i].shape, dtype))
+                np.testing.assert_allclose(out.asnumpy(), y_np[i], atol=1e-5, rtol=1e-5)
 
 
 def test_relu():
@@ -308,6 +310,44 @@ def test_pad():
     helper(y, inputs, dtype, forward)
 
 
+def test_clip():
+    x = sym.Variable("x")
+    a_min=0.2
+    a_max=0.75
+    y = sym.clip(x, a_min=a_min, a_max=a_max)
+
+    def forward(x):
+        return np.clip(x, a_min=a_min, a_max=a_max)
+
+    def backward(head_grads, x):
+        mask1 = np.greater_equal(x, a_min).astype("float")
+        mask2 = np.less_equal(x, a_max).astype("float")
+        return [head_grads * mask1 * mask2]
+
+
+    dtype = "float32"
+    inputs = [('x', (3, 4, 5), x)]
+    helper(y, inputs, dtype, forward, backward)
+
+
+def test_assign():
+    x = sym.Variable("x")
+    y = sym.Variable("y")
+    z = sym.assign(x, y)
+
+    def forward(x, y):
+        return y
+
+    def backward(head_grads, x, y):
+        return [np.zeros_like(head_grads), head_grads]
+
+
+    dtype = "float32"
+    inputs = [('x', (3, 4, 5), x),
+              ('y', (3, 4, 5), y)]
+    helper(z, inputs, dtype, forward, backward, need_input=False)
+
+
 if __name__ == "__main__":
     test_split()
     test_concatenate()
@@ -324,3 +364,5 @@ if __name__ == "__main__":
     test_softmax()
     test_squeeze()
     test_pad()
+    #test_clip()
+    test_assign()

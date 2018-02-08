@@ -7,6 +7,8 @@ import tvm
 from tvm.contrib import graph_runtime
 from . import graph_attr, graph_util
 from .. import graph as _graph
+from .. import symbol as sym
+from .._base import _all_var_init
 
 OPT_PASS_LEVEL = {
     "SimplifyInference": 0,
@@ -230,6 +232,8 @@ def build(graph, target=None, shape=None, dtype="float32", params=None, target_h
     if not isinstance(dtype, str):
         idtype, _ = graph_util.infer_dtype(graph, **dtype)
         dtype.update(zip(graph.index.input_names, idtype))
+    # Initialize all variables specified in _all_var_init
+    initialize_all_variables(params)
     # Apply optimization
     graph = optimize(graph, shape, dtype)
     # Precompute prune
@@ -329,3 +333,16 @@ def precompute_prune(graph, params):
     with tvm.build_config(auto_unroll_max_step=0):
         out_arrs = _run_graph(pre_graph, params)
     return graph, dict(zip(out_names, out_arrs))
+
+
+def initialize_all_variables(params):
+    global _all_var_init
+    if len(_all_var_init) != 0:
+        init_group_sym = sym.Group(_all_var_init.values())
+        graph = _graph.create(init_group_sym)
+        with tvm.build_config(auto_unroll_max_step=0):
+            init_values = _run_graph(graph, params)
+        params.update(dict(zip(_all_var_init.keys(), init_values)))
+        _all_var_init = {}
+
+

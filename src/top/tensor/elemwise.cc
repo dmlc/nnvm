@@ -668,5 +668,56 @@ with 1.0 if the value is minimum over given axes, otherwise 0.0 element-wise.
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_support_level(1);
 
+NNVM_REGISTER_OP(clip)
+  .describe(R"doc(Clips (limits) the values in an array.
+
+Given an interval, values outside the interval are clipped to the interval edges.
+Clipping ``x`` between `a_min` and `a_x` would be::
+
+   clip(x, a_min, a_max) = max(min(x, a_max), a_min))
+
+Example::
+
+    x = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+    clip(x,1,8) = [ 1.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  8.]
+
+)doc" NNVM_ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<ClipParam>)
+.set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<ClipParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.add_argument("data", "NDArray-or-Symbol", "Input array.")
+.add_arguments(ClipParam::__FIELDS__())
+.set_attr<nnvm::FGradient>(
+  "FGradient", [](const NodePtr& n,
+                  const std::vector<NodeEntry>& ograds){
+    CHECK_EQ(ograds.size(), 1);
+    NodeEntry sub0 = MakeNode("ones_like", n->attrs.name + "_grad_sub_0",
+                              {n->inputs[0]});
+    NodeEntry sub1 = MakeNode("__mul_scalar__", n->attrs.name + "_grad_sub_1",
+                              {sub0}, {{"scalar", n->attrs.dict["a_min"]}});
+    NodeEntry sub2 = MakeNode("less", n->attrs.name + "_grad_sub_2",
+                              {n->inputs[0], sub1});
+    NodeEntry sub3 = MakeNode("__rsub_scalar__", n->attrs.name + "_grad_sub_3",
+                              {sub2}, {{"scalar", "1"}});
+
+    NodeEntry sub4 = MakeNode("__mul_scalar__", n->attrs.name + "_grad_sub_4",
+                              {sub0}, {{"scalar", n->attrs.dict["a_max"]}});
+    NodeEntry sub5 = MakeNode("greater", n->attrs.name + "_grad_sub_5",
+                              {n->inputs[0], sub4});
+    NodeEntry sub6 = MakeNode("__rsub_scalar__", n->attrs.name + "_grad_sub_6",
+                              {sub5}, {{"scalar", "1"}});
+
+    NodeEntry sub7 = MakeNode("elemwise_mul", n->attrs.name + "_grad_sub_7",
+                              {sub3, sub6});
+    return std::vector<NodeEntry>{
+      MakeNode("elemwise_mul", n->attrs.name + "_grad",
+               {sub7, ograds[0]})
+    };
+  });
+
 }  // namespace top
 }  // namespace nnvm

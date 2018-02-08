@@ -143,3 +143,18 @@ reg.register_schedule("broadcast_div", _fschedule_broadcast)
 # broadcast_to
 reg.register_pattern("broadcast_to", OpPattern.BROADCAST)
 reg.register_schedule("broadcast_to", _fschedule_broadcast)
+
+# assign
+reg.register_compute("assign", lambda attrs, inputs, out_info: topi.identity(inputs[1]))
+reg.register_pattern("assign", OpPattern.ELEMWISE)
+reg.register_schedule("assign", _fschedule_elemwise)
+
+# clip
+@reg.register_compute("clip")
+def compute_clip(attrs, inputs, out_info):
+    """Compute definition of clip"""
+    a_min = attrs.get_float("a_min")
+    a_max = attrs.get_float("a_max")
+    return topi.math.clip(inputs[0], a_min, a_max)
+reg.register_pattern("clip", OpPattern.ELEMWISE)
+reg.register_schedule("clip", _fschedule_elemwise)
