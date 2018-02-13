@@ -179,16 +179,9 @@ inline bool BatchNormInferShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_shape->size(), 3U);
   const TShape &dshape = in_shape->at(0);
   if (dshape.ndim() == 0) return false;
-<<<<<<< HEAD
   CHECK((size_t)param.axis < dshape.Size());
 
   TShape bshape({dshape[param.axis]});
-=======
-  const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
-  const int channel_axis = param.axis;
-  CHECK_LT(channel_axis, dshape.ndim());
-  TShape bshape({dshape[channel_axis]});
->>>>>>> 071e4d8... adapt to NHWC layout
   NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 1, bshape);
   NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 2, bshape);
   NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 3, bshape);
