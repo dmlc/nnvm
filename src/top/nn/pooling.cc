@@ -94,7 +94,8 @@ NNVM_REGISTER_OP(max_pool2d)
     CHECK(param.layout == kNCHW || param.layout == kNHWC) << "Unsupported layout";
     std::string layout = (param.layout == kNCHW ? "NCHW" : "NHWC");
     return Array<Tensor>{
-      topi::nn::pool(inputs[0], pool_size, strides, padding, topi::nn::kMaxPool, ceil_mode, layout) };
+      topi::nn::pool(inputs[0], pool_size, strides, padding, \
+                     topi::nn::kMaxPool, ceil_mode, layout) };
 })
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
@@ -155,7 +156,8 @@ NNVM_REGISTER_OP(avg_pool2d)
     CHECK(param.layout == kNCHW || param.layout == kNHWC) << "Unsupported layout";
     std::string layout = (param.layout == kNCHW ? "NCHW" : "NHWC");
     return Array<Tensor>{
-      topi::nn::pool(inputs[0], pool_size, strides, padding, topi::nn::kAvgPool, ceil_mode, layout) };
+      topi::nn::pool(inputs[0], pool_size, strides, padding, \
+                     topi::nn::kAvgPool, ceil_mode, layout) };
 })
 .set_num_outputs(1)
 .set_num_inputs(1)
