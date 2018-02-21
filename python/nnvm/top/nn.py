@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import tvm
 import topi
 from topi.util import get_const_int
+from topi.nn.util import get_scheme_padding
 from .tensor import _fschedule_broadcast, _fschedule_injective
 from . import registry as reg
 from .registry import OpPattern
@@ -84,6 +85,7 @@ def compute_conv2d(attrs, inputs, _):
     groups = attrs.get_int("groups")
     channels = attrs.get_int("channels")
     layout = attrs["layout"]
+    padding_scheme = attrs.get_int("padding_scheme")
     assert layout == "NCHW" or layout == "NHWC"
     (dilation_h, dilation_w) = dilation
     if dilation_h < 1 or dilation_w < 1:
@@ -92,11 +94,20 @@ def compute_conv2d(attrs, inputs, _):
         kernel = topi.nn.dilate(inputs[1], [1, 1, dilation_h, dilation_w])
     else: #layout == NHWC
         kernel = topi.nn.dilate(inputs[1], [1, dilation_h, dilation_w, 1])
-
+    if layout == 'NCHW':
+        calc_padding = get_scheme_padding(padding_scheme, padding, layout,
+                                          (inputs[1].shape[2], inputs[1].shape[3]),
+                                          inputs[0].shape, strides)
+    elif layout == 'NHWC':
+        calc_padding = get_scheme_padding(padding_scheme, padding, layout,
+                                          (inputs[1].shape[0], inputs[1].shape[1]),
+                                          inputs[0].shape, strides)
+    else:
+        raise ValueError("Only support NCHW & NHWC")
     if groups == 1:
-        out = topi.nn.conv2d(inputs[0], kernel, strides, padding, layout)
+        out = topi.nn.conv2d(inputs[0], kernel, strides, calc_padding, layout)
     elif groups == get_const_int(inputs[0].shape[1]) and groups == channels:
-        out = topi.nn.depthwise_conv2d_nchw(inputs[0], kernel, strides, padding)
+        out = topi.nn.depthwise_conv2d_nchw(inputs[0], kernel, strides, calc_padding)
     else:
         raise ValueError("not support arbitrary group number for now")
     if attrs.get_bool("use_bias"):
@@ -186,7 +197,6 @@ def schedule_conv2d_transpose(attrs, outs, target):
         return topi.generic.schedule_conv2d_transpose_nchw(outs)
 
 reg.register_pattern("conv2d_transpose", OpPattern.OUT_ELEMWISE_FUSABLE)
-
 
 # max_pool2d
 @reg.register_schedule("max_pool2d")

@@ -73,6 +73,10 @@ inline bool Conv2DInferShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(param.channels % param.groups, 0U)
       << "output channels must divide group size";
 
+  TShape conv_padding = ConvertPaddingScheme(param.padding, param.kernel_size,
+                        param.strides, (TShape) in_shape->at(0),
+                        param.padding_scheme, param.layout);
+
   TShape wshape({param.channels / param.groups,
                  dshape[1] / param.groups,
                  param.kernel_size[0],
@@ -98,10 +102,10 @@ inline bool Conv2DInferShape(const nnvm::NodeAttrs& attrs,
   dim_t dilated_ksize_x = 1 + (param.kernel_size[1] - 1) * param.dilation[1];
   TShape oshape({dshape[0], param.channels, 0, 0});
   if (dshape[2] != 0) {
-    oshape[2] = (dshape[2] + param.padding[0] * 2 - dilated_ksize_y) / param.strides[0] + 1;
+    oshape[2] = (dshape[2] + conv_padding[0] * 2 - dilated_ksize_y) / param.strides[0] + 1;
   }
   if (dshape[3] != 0) {
-    oshape[3] = (dshape[3] + param.padding[1] * 2 - dilated_ksize_x) / param.strides[1] + 1;
+    oshape[3] = (dshape[3] + conv_padding[1] * 2 - dilated_ksize_x) / param.strides[1] + 1;
   }
   NNVM_ASSIGN_OUTPUT_SHAPE(attrs, *out_shape, 0, ConvertLayout(oshape, kNCHW, out_layout));
   // Perform incomplete shape inference. Fill in the missing values in data shape.
@@ -110,20 +114,20 @@ inline bool Conv2DInferShape(const nnvm::NodeAttrs& attrs,
   oshape = ConvertLayout((*out_shape)[0], out_layout, kNCHW);
   dshape[0] = oshape[0];
   if (oshape[2] && param.strides[0] == 1) {
-    dshape[2] = oshape[2] + dilated_ksize_y - 1 - 2 * param.padding[0];
+    dshape[2] = oshape[2] + dilated_ksize_y - 1 - 2 * conv_padding[0];
   }
   if (oshape[3] && param.strides[1] == 1) {
-    dshape[3] = oshape[3] + dilated_ksize_x - 1 - 2 * param.padding[1];
+    dshape[3] = oshape[3] + dilated_ksize_x - 1 - 2 * conv_padding[1];
   }
   NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, Conv2DParam::kData,
                           ConvertLayout(dshape, kNCHW, in_layout));
   // Check whether the kernel sizes are valid
   if (dshape[2] != 0) {
-    CHECK_LE(dilated_ksize_y, dshape[2] + 2 * param.padding[0])
+    CHECK_LE(dilated_ksize_y, dshape[2] + 2 * conv_padding[0])
       << "kernel size exceed input";
   }
   if (dshape[3] != 0) {
-    CHECK_LE(dilated_ksize_x, dshape[3] + 2 * param.padding[1])
+    CHECK_LE(dilated_ksize_x, dshape[3] + 2 * conv_padding[1])
         << "kernel size exceed input";
   }
   return true;

@@ -28,6 +28,23 @@ inline tvm::Array<tvm::Expr> ShapeToArray(TShape shape) {
   return result;
 }
 
+/*
+ * \brief Helper function to convert tvm::Tensor shape to TShape. Useful for
+ * passing data from NNVM param structures to TOPI ops.
+ *
+ * \param Tensor from where we need to extract shape
+ *
+ * \return TShape of the Tensor
+ */
+inline TShape TensorToShape(tvm::Tensor intensor) {
+  TShape result(intensor->shape.size());
+  int j = 0;
+  for (auto i : intensor->shape) {
+    result[j++] = *(as_const_int(i));
+  }
+  return result;
+}
+
 }  // namespace compiler
 }  // namespace nnvm
 #endif  // NNVM_COMPILER_UTIL_H_
