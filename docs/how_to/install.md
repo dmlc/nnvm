@@ -83,7 +83,7 @@ If you encounter the problem while installation process, you can solve by updati
 To update submodules to the latest commit set, type the following command.
 
 ```bash
-git submodule foreach git pull origin master
+git submodule update --init --recursive
 ```
 
 *WARNING: The default commit set in submodule is the recommended setting. Using the latest commit set may lead to another compilation error or something else.*
