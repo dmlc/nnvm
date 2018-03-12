@@ -144,17 +144,104 @@ reg.register_schedule("broadcast_div", _fschedule_broadcast)
 reg.register_pattern("broadcast_to", OpPattern.BROADCAST)
 reg.register_schedule("broadcast_to", _fschedule_broadcast)
 
-# assign
-reg.register_compute("assign", lambda attrs, inputs, out_info: topi.identity(inputs[1]))
-reg.register_pattern("assign", OpPattern.ELEMWISE)
-reg.register_schedule("assign", _fschedule_elemwise)
-
 # clip
-@reg.register_compute("clip")
-def compute_clip(attrs, inputs, out_info):
-    """Compute definition of clip"""
-    a_min = attrs.get_float("a_min")
-    a_max = attrs.get_float("a_max")
-    return topi.math.clip(inputs[0], a_min, a_max)
 reg.register_pattern("clip", OpPattern.ELEMWISE)
 reg.register_schedule("clip", _fschedule_elemwise)
+
+# matmul
+@reg.register_compute("matmul")
+def compute_matmul(attrs, inputs, out_info):
+    """Compute definition of matmul"""
+    transpose_a = attrs.get_bool("transpose_a")
+    transpose_b = attrs.get_bool("transpose_b")
+    return topi.math.matmul(inputs[0], inputs[1], transpose_a, transpose_b)
+reg.register_pattern("matmul", OpPattern.INJECTIVE)
+reg.register_schedule("matmul", _fschedule_injective)
+
+# elemwise sum
+@reg.register_compute("elemwise_sum")
+def compute_elemwise_sum(attrs, inputs, out_info):
+    """Compute definition of elemwise sum"""
+    num_args = attrs.get_int("num_args")
+    assert num_args == len(inputs), "Number of tensors does not match num_args."
+    return topi.tensor.elemwise_sum(inputs, num_args)
+reg.register_pattern("elemwise_sum", OpPattern.ELEMWISE)
+reg.register_schedule("elemwise_sum", _fschedule_elemwise)
+
+# full
+@reg.register_compute("full")
+def compute_full(attrs, inputs, out_info):
+    """Compute definition of full"""
+    shape = attrs.get_int_tuple("shape")
+    dtype = attrs.get_string("dtype")
+    fill_value = attrs.get_float("fill_value")
+    return topi.tensor.full(shape, dtype, fill_value)
+reg.register_pattern("full", OpPattern.OUT_ELEMWISE_FUSABLE)
+reg.register_schedule("full", _fschedule_elemwise)
+
+# full_like
+@reg.register_compute("full_like")
+def compute_elemwise_sum(attrs, inputs, out_info):
+    """Compute definition of full_like"""
+    fill_value = attrs.get_float("fill_value")
+    return topi.tensor.full_like(inputs[0], fill_value)
+reg.register_pattern("full_like", OpPattern.ELEMWISE)
+reg.register_schedule("full_like", _fschedule_elemwise)
+
+# zeros
+@reg.register_compute("zeros")
+def compute_zeros(attrs, inputs, out_info):
+    """Compute definition of zeros"""
+    shape = attrs.get_int_tuple("shape")
+    dtype = attrs.get_string("dtype")
+    return topi.tensor.full(shape, dtype, 0)
+reg.register_pattern("zeros", OpPattern.OUT_ELEMWISE_FUSABLE)
+reg.register_schedule("zeros", _fschedule_elemwise)
+
+# zeros_like
+@reg.register_compute("zeros_like")
+def compute_zeros_like(attrs, inputs, out_info):
+    """Compute definition of zeros_like"""
+    return topi.tensor.full_like(inputs[0], 0)
+reg.register_pattern("zeros_like", OpPattern.ELEMWISE)
+reg.register_schedule("zeros_like", _fschedule_elemwise)
+
+# ones
+@reg.register_compute("ones")
+def compute_ones(attrs, inputs, out_info):
+    """Compute definition of ones"""
+    shape = attrs.get_int_tuple("shape")
+    dtype = attrs.get_string("dtype")
+    #tvm.tensor.Tensor()
+    return topi.tensor.full(shape, dtype, 1)
+reg.register_pattern("ones", OpPattern.OUT_ELEMWISE_FUSABLE)
+reg.register_schedule("ones", _fschedule_elemwise)
+
+# ones_like
+@reg.register_compute("ones_like")
+def compute_ones_like(attrs, inputs, out_info):
+    """Compute definition of ones_like"""
+    return topi.tensor.full_like(inputs[0], 1)
+reg.register_pattern("ones_like", OpPattern.ELEMWISE)
+reg.register_schedule("ones_like", _fschedule_elemwise)
+
+# greater
+@reg.register_compute("greater")
+def compute_greater(attrs, inputs, out_info):
+    """Compute definition of greater"""
+    return topi.tensor.indicator(inputs[0], inputs[1], lambda lhs, rhs: lhs > rhs)
+reg.register_pattern("greater", OpPattern.ELEMWISE)
+reg.register_schedule("greater", _fschedule_elemwise)
+
+# less
+@reg.register_compute("less")
+def compute_less(attrs, inputs, out_info):
+    """Compute definition of less"""
+    return topi.tensor.indicator(inputs[0], inputs[1], lambda lhs, rhs: lhs < rhs)
+reg.register_pattern("less", OpPattern.ELEMWISE)
+reg.register_schedule("less", _fschedule_elemwise)
+
+# block_grad
+reg.register_compute("block_grad", _compute_unary(topi.identity))
+reg.register_pattern("block_grad", OpPattern.ELEMWISE)
+reg.register_schedule("block_grad", _fschedule_elemwise)

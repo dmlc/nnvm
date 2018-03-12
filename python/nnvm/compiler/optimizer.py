@@ -37,7 +37,7 @@ class Optimizer(object):
         self.clip_gradient = clip_gradient
         self.wd = wd
         num_updates = sym.Variable(name+'_t', init=sym.zeros(shape=[1]))
-        self.update_t = sym.assign(num_updates, num_updates + 1)
+        self.update_t = sym._assign(num_updates, num_updates + 1)
 
     def minimize(self, obj, var=None):
         """Minimize given obj symbol respect to var. If var is not set, all input
@@ -86,7 +86,7 @@ class SGD(Optimizer):
         for v, g in zip(variables, grads):
             if self.clip_gradient is not None:
                 g = sym.clip(g, a_min=-1 * self.clip_gradient, a_max=self.clip_gradient)
-            updates.append(sym.assign(v, v - lr_t * (self.rescale_grad * g + self.wd * v)))
+            updates.append(sym._assign(v, v - lr_t * (self.rescale_grad * g + self.wd * v)))
         return sym.Group(updates)
 
 
@@ -117,9 +117,9 @@ class Adam(Optimizer):
         for variable, g, m, v in zip(variables, grads, self.m, self.v):
             if self.clip_gradient is not None:
                 g = sym.clip(g, a_min=-1 * self.clip_gradient, a_max=self.clip_gradient)
-            update_m = sym.assign(m, self.beta1 * m + (1 - self.beta1) * g)
-            update_v = sym.assign(v, self.beta2 * v + (1 - self.beta2) * g * g)
-            update_var = sym.assign(variable, variable - lr_t * (update_m / (sym.sqrt(update_v) \
+            update_m = sym._assign(m, self.beta1 * m + (1 - self.beta1) * g)
+            update_v = sym._assign(v, self.beta2 * v + (1 - self.beta2) * g * g)
+            update_var = sym._assign(variable, variable - lr_t * (update_m / (sym.sqrt(update_v) \
                          + self.epsilon) + self.wd * variable))
             updates.append(update_var)
         return sym.Group(updates)
