@@ -13,13 +13,29 @@ reg.register_schedule("expand_dims", _fschedule_broadcast)
 
 # expand_like
 @reg.register_compute("expand_like")
-def compute_reshape_like(attrs, inputs, _):
+def compute_expand_like(attrs, inputs, _):
     """Compute definition of expand_like"""
     exclude = attrs.get_bool("exclude")
     axis = attrs.get_int_tuple("axis")
-    return topi.transform.expand_like(inputs[0], inputs[1], axis, exclude)
+    if exclude:
+        exclude_axis = (axis,) if isinstance(axis, int) else axis
+        axis = []
+        for item in range(len(inputs[1].shape)):
+            if item not in exclude_axis:
+                axis.append(item)
+        axis = tuple(axis)
+
+    return topi.transform.expand_like(inputs[0], inputs[1], axis)
 reg.register_pattern("expand_like", OpPattern.BROADCAST)
 reg.register_schedule("expand_like", _fschedule_broadcast)
+
+# reshape_like
+@reg.register_compute("reshape_like")
+def compute_reshape_like(attrs, inputs, out_info):
+    """Compute definition of reshape_like"""
+    return topi.reshape(inputs[0], inputs[1].shape)
+reg.register_pattern("reshape_like", OpPattern.INJECTIVE)
+reg.register_schedule("reshape_like", _fschedule_injective)
 
 # transpose
 reg.register_pattern("transpose", OpPattern.INJECTIVE)
@@ -28,14 +44,6 @@ reg.register_schedule("transpose", _fschedule_injective)
 # reshape
 reg.register_pattern("reshape", OpPattern.INJECTIVE)
 reg.register_schedule("reshape", _fschedule_injective)
-
-# reshape_like
-@reg.register_compute("reshape_like")
-def compute_reshape_like(_, inputs, _):
-    """Compute definition of reshape_like"""
-    return topi.reshape(inputs[0], inputs[1].shape)
-reg.register_pattern("reshape_like", OpPattern.INJECTIVE)
-reg.register_schedule("reshape_like", _fschedule_injective)
 
 # squeeze
 reg.register_pattern("squeeze", OpPattern.INJECTIVE)

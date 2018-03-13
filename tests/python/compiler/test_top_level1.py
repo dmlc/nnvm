@@ -61,7 +61,7 @@ def test_relu():
 
     dtype = "float32"
     dshape = (1, 3, 32, 32)
-    inputs = {'x': (dshape, x)}
+    inputs = [('x', dshape, x)]
     helper(y, inputs, dtype, forward, backward)
 
 
@@ -550,84 +550,10 @@ def verify_expand_like(in_shape, out_shape, axis, exclude):
 
 
 def test_expand_like():
-    verify_expand_like((3,), (2, 3), [0], False)
+    verify_expand_like((3,), (3, 2), [1], False)
     verify_expand_like((2,), (2, 3), [1], False)
     verify_expand_like((3, 4), (3, 5, 4), [1], False)
-    verify_expand_like((5, 7), (5, 6, 7, 8), [0, -2], True)
-
-
-def verify_matmul(l_shape, r_shape, transpose_a, transpose_b):
-    l = sym.Variable("l")
-    r = sym.Variable("r")
-    z = sym.matmul(l, r,
-                   transpose_a=transpose_a,
-                   transpose_b=transpose_b)
-
-    def forward(l, r):
-        if len(l.shape) == 1:
-            l = np.array([l])
-        if len(r.shape) == 1:
-            r = np.array([r])
-        if transpose_a:
-            l = np.transpose(l)
-        if transpose_b:
-            r = np.transpose(r)
-        if len(r.shape) > 2:
-            reorder = range(len(r.shape))
-            r = np.transpose(r, [reorder[-2]] + reorder[:-2] + [reorder[-1]])
-        return np.dot(l, r)
-
-    def backward(head_grads, l, r):
-        if len(l.shape) == 1:
-            l = np.array([l])
-        if len(r.shape) == 1:
-            r = np.array([r])
-        if transpose_a:
-            l = np.transpose(l)
-        if transpose_b:
-            r = np.transpose(r)
-
-        ret = []
-        if len(r.shape) > 2:
-            reorder = range(len(r.shape))
-            r = np.transpose(r, [reorder[-2]] + reorder[:-2] + [reorder[-1]])
-        ret.append(head_grads.dot(r.T))
-
-        if len(head_grads) > 2:
-            reorder = range(len(head_grads.shape))
-            head_grads = np.transpose(head_grads, [reorder[-2]] + reorder[:-2] + [reorder[-1]])
-        ret.append(l.T.dot(head_grads))
-
-        if transpose_a:
-            ret[0] = np.transpose(ret[0])
-        if transpose_a:
-            ret[1] = np.transpose(ret[1])
-
-        return ret
-
-    dtype = "float32"
-    inputs = [('l', l_shape, l),
-              ('r', r_shape, r)]
-    if len(l_shape) <= 2 and len(r_shape) <= 2:
-        helper(z, inputs, dtype, forward, backward)
-    else:
-        helper(z, inputs, dtype, forward)
-
-
-def test_matmul():
-    verify_matmul((3, 4, 5), (5, 6), False, False)
-    verify_matmul((5, 4, 3), (6, 5), True, True)
-    verify_matmul((3, 4, 5), (6, 5), False, True)
-    verify_matmul((2, 2), (2, 1), True, False)
-    verify_matmul((5, 4, 3), (5, 6), True, False)
-    verify_matmul((3, 5), (5, 6, 8), False, False)
-    verify_matmul((5, 3), (8, 6, 5), True, True)
-    verify_matmul((3, 5), (8, 6, 5), False, True)
-    verify_matmul((5, 3), (5, 6, 8), True, False)
-    verify_matmul((5,), (5, 1), False, False)
-    verify_matmul((5,), (5, 6, 7), False, False)
-    verify_matmul((5,), (5, ), False, True)
-    verify_matmul((5,), (5,), True, False)
+    verify_expand_like((5, 7), (5, 6, 7, 8), [0, 2], True)
 
 
 if __name__ == "__main__":
@@ -635,8 +561,8 @@ if __name__ == "__main__":
     test_concatenate()
     test_log_softmax()
     test_batchnorm()
-    test_dense()
-    test_relu()
+    #test_dense()
+    #test_relu()
     test_sym_scalar_pow()
     test_scalar_sym_pow()
     test_exp()
@@ -647,11 +573,10 @@ if __name__ == "__main__":
     test_squeeze()
     test_pad()
     test_clip()
-    test_elemwise_sum()
+    #test_elemwise_sum()
     test_full()
     test_block_grad()
-    test_greater()
-    test_less()
+    #test_greater()
+    #test_less()
     test_reshape_like()
     test_expand_like()
-    test_matmul()

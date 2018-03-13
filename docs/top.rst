@@ -28,7 +28,6 @@ This level enables fully connected multi-layer perceptron.
    :nosignatures:
 
    nnvm.symbol.dense
-   nnvm.symbol.matmul
    nnvm.symbol.relu
    nnvm.symbol.tanh
    nnvm.symbol.sigmoid
@@ -85,8 +84,8 @@ This level enables typical convnet models.
    :nosignatures:
 
    nnvm.symbol.reshape
-   nnvm.symbol.reshape_like
    nnvm.symbol.expand_like
+   nnvm.symbol.reshape_like
    nnvm.symbol.copy
    nnvm.symbol.negative
    nnvm.symbol.leaky_relu
@@ -117,7 +116,6 @@ This level enables typical convnet models.
 Detailed Definitions
 --------------------
 .. autofunction:: nnvm.symbol.dense
-.. autofunction:: nnvm.symbol.matmul
 .. autofunction:: nnvm.symbol.relu
 .. autofunction:: nnvm.symbol.tanh
 .. autofunction:: nnvm.symbol.sigmoid
@@ -160,8 +158,9 @@ Detailed Definitions
 .. autofunction:: nnvm.symbol.global_avg_pool2d
 
 .. autofunction:: nnvm.symbol.reshape
-.. autofunction:: nnvm.symbol.reshape_like
+
 .. autofunction:: nnvm.symbol.expand_like
+.. autofunction:: nnvm.symbol.reshape_like
 .. autofunction:: nnvm.symbol.copy
 .. autofunction:: nnvm.symbol.negative
 .. autofunction:: nnvm.symbol.leaky_relu
