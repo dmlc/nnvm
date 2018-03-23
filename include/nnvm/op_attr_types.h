@@ -152,6 +152,21 @@ using FIgnoreInputs = std::function<
   std::vector<uint32_t> (const NodeAttrs& attrs)>;
 
 /*!
+ * \brief Get the output node of the op node
+ *  This function generates the graph of the node
+ * \param nodeptr The current node
+ * \param inputs The current node's inputs
+ * \param input_shapes The current node's input shapes
+ * \return the Node's outputs
+ *
+ * \note Register under "FCompute"
+ */
+using FCompute = std::function<std::vector<NodeEntry>(
+    const NodePtr& nodeptr,
+    const std::vector<NodeEntry>& inputs,
+    const std::vector<TShape>& input_shapes)>;
+
+/*!
  * \brief Get the gradient node of the op node
  *  This function generates the backward graph of the node
  * \param nodeptr The node to take gradient

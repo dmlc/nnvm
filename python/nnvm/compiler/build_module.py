@@ -156,11 +156,11 @@ def optimize(graph, shape, dtype="float32"):
     cfg = BuildConfig.current
     if cfg.pass_enabled("SimplifyInference"):
         graph = graph_attr.set_shape_inputs(graph, shape)
-        graph = graph.apply(["InferShape", "SimplifyInference"])
+        graph = graph.apply(["InferShape", "ExpandCompute", "SimplifyInference"])
 
     if cfg.pass_enabled("FoldScaleAxis"):
         graph = graph_attr.set_shape_inputs(graph, shape)
-        graph = graph.apply(["InferShape", "FoldScaleAxis"])
+        graph = graph.apply(["InferShape", "ExpandCompute", "FoldScaleAxis"])
     return graph
 
 
@@ -230,6 +230,8 @@ def build(graph, target=None, shape=None, dtype="float32", params=None, target_h
     if not isinstance(dtype, str):
         idtype, _ = graph_util.infer_dtype(graph, **dtype)
         dtype.update(zip(graph.index.input_names, idtype))
+    # Expand FComputes
+    graph = graph.apply("ExpandCompute")
     # Apply optimization
     graph = optimize(graph, shape, dtype)
     # Precompute prune
