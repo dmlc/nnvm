@@ -19,7 +19,7 @@ Graph ExpandCompute(nnvm::Graph src) {
   const IndexedGraph& idx = src.indexed_graph();
   const ShapeVector& shape_vec = src.GetAttr<ShapeVector>("shape");
   auto transform = [&](uint32_t nid, const NodePtr& n, std::vector<NodeEntry>* ret) {
-    static auto& fcompute = Op::GetAttr<FCompute>("FCompute");
+    static auto& fcompute = Op::GetAttr<FExpandCompute>("FExpandCompute");
     if (!fcompute.count(n->op())) return false;
     std::vector<TShape> input_shapes;
     for (const NodeEntry& inp : n->inputs) {

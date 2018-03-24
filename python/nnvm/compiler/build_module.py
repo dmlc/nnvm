@@ -230,7 +230,7 @@ def build(graph, target=None, shape=None, dtype="float32", params=None, target_h
     if not isinstance(dtype, str):
         idtype, _ = graph_util.infer_dtype(graph, **dtype)
         dtype.update(zip(graph.index.input_names, idtype))
-    # Expand FComputes
+    # Expand FExpandComputes
     graph = graph.apply("ExpandCompute")
     # Apply optimization
     graph = optimize(graph, shape, dtype)

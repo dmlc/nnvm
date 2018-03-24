@@ -159,9 +159,9 @@ using FIgnoreInputs = std::function<
  * \param input_shapes The current node's input shapes
  * \return the Node's outputs
  *
- * \note Register under "FCompute"
+ * \note Register under "FExpandCompute"
  */
-using FCompute = std::function<std::vector<NodeEntry>(
+using FExpandCompute = std::function<std::vector<NodeEntry>(
     const NodePtr& nodeptr,
     const std::vector<NodeEntry>& inputs,
     const std::vector<TShape>& input_shapes)>;
