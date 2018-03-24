@@ -154,15 +154,13 @@ def optimize(graph, shape, dtype="float32"):
     """
     # pylint: disable=unused-argument
     cfg = BuildConfig.current
-    if cfg.pass_enabled("SimplifyInference"):
+    opt_passes = ("SimplifyInference", "FoldScaleAxis")
+    enabled_passes = list(filter(cfg.pass_enabled, opt_passes))
+    if enabled_passes:
+        enabled_passes.insert(0, "ExpandCompute")
+    for p in enabled_passes:
         graph = graph_attr.set_shape_inputs(graph, shape)
-        graph = graph.apply(["InferShape", "ExpandCompute",
-                             "InferShape", "SimplifyInference"])
-
-    if cfg.pass_enabled("FoldScaleAxis"):
-        graph = graph_attr.set_shape_inputs(graph, shape)
-        graph = graph.apply(["InferShape", "ExpandCompute",
-                             "InferShape", "FoldScaleAxis"])
+        graph = graph.apply(["InferShape", p])
     return graph
 
 

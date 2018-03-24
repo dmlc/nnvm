@@ -166,7 +166,7 @@ Example::
           [[1,4],[4,3],[5,2]],
           [[7,1],[7,2],[7,3]]]
 
-  mean(data, axis=1) = mean(data, axis=[2, 3], exclude=True)
+  mean(data, axis=1) = mean(data, axis=[0, 2], exclude=True)
   [[ 1.333   8.333]
    [ 3.333.  3.]
    [ 7.      2.]]
@@ -186,9 +186,39 @@ Example::
     return std::vector<NodeEntry>{
       MakeNode("__div_scalar__", n->attrs.name + "_div",
           {MakeNode("sum", n->attrs.name + "_sum",
-                    {NodeEntry{n, 0, 0}},
-                    n->attrs.dict)},
+                    {n->inputs[0]}, n->attrs.dict)},
           {{"scalar", std::to_string(numel)}})
+    };
+});
+
+NNVM_REGISTER_REDUCE_OP(var)
+.describe(R"code(Computes the variance of array elements over given axes.
+
+Example::
+
+  data = [[[1,2],[2,3],[1,3]],
+          [[1,4],[4,3],[5,2]],
+          [[7,1],[7,2],[7,3]]]
+
+  var(data, axis=1) = var(data, axis=[0, 2], exclude=True)
+  [[ 0.222   0.222]
+   [ 2.888.  0.666]
+   [ 0.      0.666]]
+
+)code" NNVM_ADD_FILELINE)
+.set_attr<FExpandCompute>(
+  "FExpandCompute", [](const NodePtr& n,
+                       const std::vector<NodeEntry>& inputs,
+                       const std::vector<TShape>& input_shapes) {
+    auto rp_keepdims = std::unordered_map<std::string, std::string>(n->attrs.dict);
+    rp_keepdims["keepdims"] = "true";
+    auto inp = n->inputs[0];
+    auto mean = MakeNode("mean", n->attrs.name + "_m1", {inp}, rp_keepdims);
+    auto diffs = MakeNode("broadcast_sub", n->attrs.name + "_sub", {inp, mean});
+    auto diffs2 = MakeNode("__pow_scalar__", n->attrs.name + "_pow",
+                           { diffs }, {{"scalar", "2"}});
+    return std::vector<NodeEntry>{
+      MakeNode("mean", n->attrs.name + "_m2", { diffs2 }, n->attrs.dict)
     };
 });
 
