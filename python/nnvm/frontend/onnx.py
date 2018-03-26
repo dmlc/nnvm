@@ -220,7 +220,7 @@ class Reshape(OnnxOpConvertor):
     @classmethod
     def _impl_v5(cls, inputs, attr, params):
         return _sym.reshape(inputs[0],
-                            shape=graph_util.infer_shape(_graph.create(inputs[1]))[1][0])
+                            shape=tuple(params[inputs[1].list_output_names()[0]].asnumpy()))
 
 
 class Scale(OnnxOpConvertor):
@@ -352,7 +352,7 @@ _identity_list = []
 # for 1 to N mapping(composed), use custom callable functions
 # for N to 1 mapping, currently not supported(?)
 def _get_convert_map(opset):
-    _convert_map = {
+    return {
         # defs/experimental
         'Identity': Renamer('copy'),
         # 'Affine'
@@ -452,7 +452,6 @@ def _get_convert_map(opset):
         # 'Squeeze'
         'Pad': Pad().get_convertor(opset),
     }
-    return _convert_map
 
 
 class GraphProto(object):
@@ -615,7 +614,7 @@ class GraphProto(object):
         return outputs
 
 
-def from_onnx(graph, opset=0):
+def from_onnx(model):
     """Load onnx graph which is a python protobuf object into nnvm graph.
     The companion parameters will be handled automatically.
     The inputs from onnx graph is vague, only providing "1", "2"...
@@ -624,10 +623,8 @@ def from_onnx(graph, opset=0):
 
     Parameters
     ----------
-    graph : protobuf object
-        ONNX GraphProto, or ONNX ModelProto after ONNX v0.2
-    opset : opset version
-        Default 0 means use the latest version. 
+    model : protobuf object
+        ONNX ModelProto after ONNX v0.2
 
     Returns
     -------
@@ -638,8 +635,6 @@ def from_onnx(graph, opset=0):
         Dict of converted parameters stored in tvm.ndarray format
     """
     g = GraphProto()
-    if hasattr(graph, 'graph'):
-        # it's a ModelProto wrapper
-        graph = graph.graph
-    sym, params = g.from_onnx(graph, opset)
+    graph = model.graph
+    sym, params = g.from_onnx(graph, model.opset_import[0].version)
     return sym, params
