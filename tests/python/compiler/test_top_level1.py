@@ -210,19 +210,13 @@ def test_dense():
 
     def forward(x, dense_weight, dense_bias):
         return np.dot(x, dense_weight.T) + dense_bias
-
-    def backward(head_grads, x, dense_weight, dense_bias):
-            return [np.dot(head_grads, dense_weight),
-                    np.dot(head_grads.T, x),
-                    np.sum(head_grads, axis=0)]
-
     dtype = "float32"
     inputs = [
         ('x', (10, 100), x),
         ('dense_weight', (3, 100), w),
         ('dense_bias', (3,), b)
     ]
-    helper(y, inputs, dtype, forward, backward)
+    helper(y, inputs, dtype, forward)
 
 
 def test_batchnorm():
@@ -561,8 +555,8 @@ if __name__ == "__main__":
     test_concatenate()
     test_log_softmax()
     test_batchnorm()
-    #test_dense()
-    #test_relu()
+    test_dense()
+    test_relu()
     test_sym_scalar_pow()
     test_scalar_sym_pow()
     test_exp()
@@ -573,10 +567,10 @@ if __name__ == "__main__":
     test_squeeze()
     test_pad()
     test_clip()
-    #test_elemwise_sum()
+    test_elemwise_sum()
     test_full()
     test_block_grad()
-    #test_greater()
-    #test_less()
+    test_greater()
+    test_less()
     test_reshape_like()
     test_expand_like()

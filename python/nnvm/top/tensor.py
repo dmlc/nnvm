@@ -171,7 +171,7 @@ reg.register_schedule("full", _fschedule_elemwise)
 
 # full_like
 @reg.register_compute("full_like")
-def compute_elemwise_sum(attrs, inputs, _):
+def compute_full_like(attrs, inputs, _):
     """Compute definition of full_like"""
     fill_value = attrs.get_float("fill_value")
     return topi.tensor.full_like(inputs[0], fill_value)
@@ -219,7 +219,7 @@ reg.register_schedule("ones_like", _fschedule_elemwise)
 @reg.register_compute("greater")
 def compute_greater(_, inputs, out_info):
     """Compute definition of greater"""
-    return topi.greater(inputs[0], inputs[1])
+    return topi.tensor.greater(inputs[0], inputs[1], 'float32')
 reg.register_pattern("greater", OpPattern.ELEMWISE)
 reg.register_schedule("greater", _fschedule_elemwise)
 
@@ -227,7 +227,7 @@ reg.register_schedule("greater", _fschedule_elemwise)
 @reg.register_compute("less")
 def compute_less(_, inputs, out_info):
     """Compute definition of less"""
-    return topi.tensor.less(inputs[0], inputs[1])
+    return topi.tensor.less(inputs[0], inputs[1], 'float32')
 reg.register_pattern("less", OpPattern.ELEMWISE)
 reg.register_schedule("less", _fschedule_elemwise)
 

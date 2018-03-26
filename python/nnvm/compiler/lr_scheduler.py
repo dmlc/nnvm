@@ -54,5 +54,5 @@ class FactorScheduler(LRScheduler):
         self.stop_factor_lr = stop_factor_lr
 
     def __call__(self, num_update):
-        updated_lr = self.base_lr * self.factor ** (num_update/self.step)
+        updated_lr = self.base_lr * self.factor ** (num_update / self.step)
         return sym.clip(updated_lr, a_min=self.stop_factor_lr, a_max=self.base_lr)

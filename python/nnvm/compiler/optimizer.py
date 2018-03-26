@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name, no-member, too-few-public-methods, too-many-arguments, too-many-locals
+# pylint: disable=invalid-name, no-member, too-few-public-methods, too-many-arguments, too-many-locals, protected-access
 """Optimizer API"""
 from . import graph_util
 from .. import symbol as sym
@@ -36,8 +36,8 @@ class Optimizer(object):
         self.rescale_grad = rescale_grad
         self.clip_gradient = clip_gradient
         self.wd = wd
-        num_updates = sym.Variable(name+'_t', init=sym.zeros(shape=[1]))
-        self.update_t = sym._assign(num_updates, num_updates + 1)
+        init_update_t = sym.Variable(name+'_t', init=sym.zeros(shape=(1,), dtype="int32"))
+        self.update_t = sym._assign(init_update_t, init_update_t + 1)
 
     def minimize(self, obj, var=None):
         """Minimize given obj symbol respect to var. If var is not set, all input
@@ -80,13 +80,16 @@ class SGD(Optimizer):
 
     def minimize(self, obj, var=None):
         variables = var or obj.list_input_variables()
+        if not isinstance(variables, list):
+            variables = [variables]
         grads = graph_util.gradients(obj, variables)
         updates = []
         lr_t = self._get_lr()
         for v, g in zip(variables, grads):
+            g = self.rescale_grad * g
             if self.clip_gradient is not None:
                 g = sym.clip(g, a_min=-1 * self.clip_gradient, a_max=self.clip_gradient)
-            updates.append(sym._assign(v, v - lr_t * (self.rescale_grad * g + self.wd * v)))
+            updates.append(sym._assign(v, v - lr_t * (g + self.wd * v)))
         return sym.Group(updates)
 
 
@@ -107,6 +110,8 @@ class Adam(Optimizer):
 
     def minimize(self, obj, var=None):
         variables = var or obj.list_input_variables()
+        if not isinstance(variables, list):
+            variables = [variables]
         grads = graph_util.gradients(obj, variables)
         updates = []
         for i, v in enumerate(variables):
@@ -115,6 +120,7 @@ class Adam(Optimizer):
         rate = sym.sqrt(1 - self.beta2 ** self.update_t) / (1 -  self.beta1 ** self.update_t)
         lr_t = self._get_lr() * rate
         for variable, g, m, v in zip(variables, grads, self.m, self.v):
+            g = self.rescale_grad * g
             if self.clip_gradient is not None:
                 g = sym.clip(g, a_min=-1 * self.clip_gradient, a_max=self.clip_gradient)
             update_m = sym._assign(m, self.beta1 * m + (1 - self.beta1) * g)

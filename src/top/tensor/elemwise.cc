@@ -190,7 +190,10 @@ NNVM_REGISTER_ELEMWISE_BINARY_OP(elemwise_add)
     // y = n0 + n1
     // grad_0 = grad_y
     // grad_1 = grad_y
-    return std::vector<NodeEntry>{ograds[0], ograds[0]};
+    return std::vector<NodeEntry>{ MakeNode("copy", n->attrs.name + "_grad_0",
+                                            {ograds[0]}),
+                                   MakeNode("copy", n->attrs.name + "_grad_0",
+                                            {ograds[0]}) };
 });
 
 NNVM_REGISTER_ELEMWISE_BINARY_OP(elemwise_sub)
@@ -311,7 +314,8 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(copy)
                   const std::vector<NodeEntry>& ograds){
     // y = copy(n0)
     // grad_0 = grad_y
-    return std::vector<NodeEntry>{ograds[0]};
+    return std::vector<NodeEntry>{ MakeNode("copy", n->attrs.name + "_grad_0",
+                                            {ograds[0]}) };
 });
 
 DMLC_REGISTER_PARAMETER(InitOpParam);
@@ -415,7 +419,8 @@ NNVM_REGISTER_ELEMWISE_BINARY_SCALAR(__add_scalar__)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
-    return std::vector<NodeEntry>{ograds[0]};
+    return std::vector<NodeEntry>{ MakeNode("copy", n->attrs.name + "_grad_0",
+                                            {ograds[0]}) };
 });
 
 NNVM_REGISTER_ELEMWISE_BINARY_SCALAR(__sub_scalar__)
@@ -601,7 +606,7 @@ NNVM_REGISTER_ELEMWISE_REDUCE_OP(elemwise_sum)
     CHECK_EQ(ograds.size(), 1);
     std::vector<NodeEntry> ret;
     for (size_t i = 0; i < n->inputs.size(); i++) {
-      ret.push_back(ograds[0]);
+      ret.push_back(MakeNode("copy", n->attrs.name + "_grad_0", {ograds[0]}));
     }
     return ret;
   });
@@ -690,11 +695,10 @@ Example::
   "FTVMCompute", [](const NodeAttrs& attrs,
                     const Array<Tensor>& inputs,
                     const Array<Tensor>& out_info) {
-
     const ClipParam params = get<ClipParam>(attrs.parsed);
-    return Array<Tensor>{ topi::clip(inputs[0],
-                                     tvm::make_const(tvm::Float(32), params.a_min),
-                                     tvm::make_const(tvm::Float(32), params.a_max)) };
+    return Array<Tensor>{
+      topi::clip(inputs[0], tvm::make_const(tvm::Float(32), params.a_min),
+                 tvm::make_const(tvm::Float(32), params.a_max)) };
   })
 .add_argument("data", "NDArray-or-Symbol", "Input array.")
 .add_arguments(ClipParam::__FIELDS__())
