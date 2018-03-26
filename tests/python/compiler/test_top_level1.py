@@ -353,7 +353,7 @@ def verify_elemwise_sum(num_args):
     y = sym.elemwise_sum(*s, num_args=num_args)
 
     def forward(**inputs):
-        return np.sum(np.array(inputs.values()), axis=0)
+        return np.sum(np.array(list(inputs.values())), axis=0)
 
     def backward(head_grads, **inputs):
         return [head_grads] * num_args
