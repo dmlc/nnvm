@@ -369,7 +369,8 @@ def initialize_variables(ishape, idtype):
         else:
             const_init_dict[key] = tvm.nd.array(value)
     # Make sure variables are initialized only once.
-    for key, _ in _all_var_init.items():
+    keys = [key for key in _all_var_init.keys()]
+    for key in keys:
         del _all_var_init[key]
     if symbol_init_dict:
         # Create dummy params to run initialization graph
