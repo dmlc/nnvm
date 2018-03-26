@@ -237,6 +237,7 @@ def build(graph, target=None, shape=None, dtype="float32", params=None, target_h
         idtype, _ = graph_util.infer_dtype(graph, **dtype)
         dtype.update(zip(graph.index.input_names, idtype))
     # Initialize all variables specified in _all_var_init
+    init_var = {}
     if _all_var_init:
         init_var = initialize_variables(shape, dtype)
     # Apply optimization
@@ -260,7 +261,7 @@ def build(graph, target=None, shape=None, dtype="float32", params=None, target_h
         graph = graph.apply("GraphFusePartition").apply("GraphFuseCompile")
     libmod = graph_attr._move_out_module(graph, "module")
     # Write variable initial values into params
-    if 'init_var' in locals():
+    if init_var:
         if params is None:
             params = {}
         params.update(init_var)
