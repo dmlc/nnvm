@@ -163,7 +163,6 @@ Example::
       MakeNode("expand_like", n->attrs.name + "_grad",
                {ograds[0], n->inputs[0]},
                {{"axis", axis.str()},
-                {"keepdims", std::to_string(param.keepdims)},
                 {"exclude", std::to_string(param.exclude)}})
   };
 });
