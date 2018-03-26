@@ -237,7 +237,7 @@ def build(graph, target=None, shape=None, dtype="float32", params=None, target_h
         idtype, _ = graph_util.infer_dtype(graph, **dtype)
         dtype.update(zip(graph.index.input_names, idtype))
     # Initialize all variables specified in _all_var_init
-    if len(_all_var_init) > 0:
+    if _all_var_init:
         init_var = initialize_variables(shape, dtype)
     # Apply optimization
     graph = optimize(graph, shape, dtype)
@@ -369,9 +369,9 @@ def initialize_variables(ishape, idtype):
         else:
             const_init_dict[key] = tvm.nd.array(value)
     # Make sure variables are initialized only once.
-    for key in _all_var_init.keys():
+    for key, _ in _all_var_init.items():
         del _all_var_init[key]
-    if len(symbol_init_dict) > 0:
+    if symbol_init_dict:
         # Create dummy params to run initialization graph
         params = {}
         for name, shape in ishape.items():
@@ -386,6 +386,3 @@ def initialize_variables(ishape, idtype):
     for name, data in init_var.items():
         ishape[name] = data.shape
     return init_var
-
-
-
