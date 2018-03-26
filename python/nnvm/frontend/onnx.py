@@ -212,6 +212,17 @@ class Reciprocal(OnnxOpConvertor):
         return 1.0 / inputs[0]
 
 
+class Reshape(OnnxOpConvertor):
+    @classmethod
+    def _impl_v1(cls, inputs, attr, params):
+        return _sym.reshape(inputs[0], shape=attr['shape'])
+
+    @classmethod
+    def _impl_v5(cls, inputs, attr, params):
+        return _sym.reshape(inputs[0],
+                            shape=graph_util.infer_shape(_graph.create(inputs[1]))[1][0])
+
+
 class Scale(OnnxOpConvertor):
     @classmethod
     def _impl_v1(cls, inputs, attr, params):
@@ -432,7 +443,7 @@ def _get_convert_map(opset):
 
         # defs/tensor
         'Cast': AttrCvt('cast', {'to': 'dtype'}),
-        'Reshape': Renamer('reshape'),
+        'Reshape': Reshape().get_convertor(opset),
         'Concat': Renamer('concatenate'),
         'Split': AttrCvt('split', {'split': 'indices_or_sections'}),
         # 'Slice'
