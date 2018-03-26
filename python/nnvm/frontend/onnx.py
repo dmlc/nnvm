@@ -1,6 +1,7 @@
 # pylint: disable=import-self, invalid-name, unused-argument
 """ONNX: Open Neural Network Exchange frontend."""
 from __future__ import absolute_import as _abs
+import onnx
 import tvm
 from .. import symbol as _sym
 from .. import graph as _graph
@@ -695,7 +696,7 @@ def from_onnx(model):
     Parameters
     ----------
     model : protobuf object
-        ONNX ModelProto after ONNX v0.2
+        ONNX ModelProto after ONNX v1.1.0
 
     Returns
     -------
@@ -707,5 +708,7 @@ def from_onnx(model):
     """
     g = GraphProto()
     graph = model.graph
-    sym, params = g.from_onnx(graph, model.opset_import[0].version)
+    opset = model.opset_import[
+        0].version if model.opset_import else onnx.defs.onnx_opset_version()
+    sym, params = g.from_onnx(graph, opset)
     return sym, params
