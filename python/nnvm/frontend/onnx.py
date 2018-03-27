@@ -708,7 +708,6 @@ def from_onnx(model):
     """
     g = GraphProto()
     graph = model.graph
-    opset = model.opset_import[
-        0].version if model.opset_import else onnx.defs.onnx_opset_version()
+    opset = model.opset_import[0].version if model.opset_import else 1
     sym, params = g.from_onnx(graph, opset)
     return sym, params
