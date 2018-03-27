@@ -77,7 +77,7 @@ class Pool(OnnxOpConverter):
             ignores=['dilations'],
             # TODO(zhreshold): make sure ceil_mode in onnx, and layout?
             extras={'ceil_mode': False},
-            custom_check=_dimension_constraint())
+            custom_check=_dimension_constraint())(inputs, attr, params)
 
 
 class Absolute(OnnxOpConverter):
@@ -103,7 +103,8 @@ class BatchNorm(OnnxOpConverter):
         return AttrCvt(
             op_name='batch_norm',
             disables=['momentum'],
-            ignores=['spatial', 'is_test', 'consumed_inputs'])
+            ignores=['spatial', 'is_test', 'consumed_inputs'])(inputs, attr,
+                                                               params)
 
 
 class Conv(OnnxOpConverter):
@@ -122,7 +123,7 @@ class Conv(OnnxOpConverter):
                 'group': ('groups', 1)
             },
             extras={'use_bias': len(inputs) == 3},
-            custom_check=_dimension_constraint())(inputs, attr)
+            custom_check=_dimension_constraint())(inputs, attr, params)
 
 
 class ConvTranspose(OnnxOpConverter):
@@ -143,7 +144,7 @@ class ConvTranspose(OnnxOpConverter):
             },
             disables=['output_shape'],
             extras={'use_bias': len(inputs) == 3},
-            custom_check=_dimension_constraint())(inputs, attr)
+            custom_check=_dimension_constraint())(inputs, attr, params)
 
 
 class Div(Elemwise):
@@ -203,8 +204,8 @@ class Pad(OnnxOpConverter):
                 'value': 'pad_value',
                 'pads': 'pad_width'
             },
-            custom_check=lambda attrs: attrs.get('mode') == 'constant')(inputs,
-                                                                        attr)
+            custom_check=lambda attrs: attrs.get('mode') == 'constant')(
+                inputs, attr, params)
 
 
 class ParametricSoftPlus(OnnxOpConverter):
