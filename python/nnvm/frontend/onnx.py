@@ -1,7 +1,6 @@
 # pylint: disable=import-self, invalid-name, unused-argument
 """ONNX: Open Neural Network Exchange frontend."""
 from __future__ import absolute_import as _abs
-import onnx
 import tvm
 from .. import symbol as _sym
 from .. import graph as _graph
