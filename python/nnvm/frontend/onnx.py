@@ -25,8 +25,9 @@ class OnnxOpConverter(object):
         if hasattr(cls, '_impl_v{}'.format(version)):
             return getattr(cls, '_impl_v{}'.format(version))
         else:
-            raise NotImplementedError('opset version {} of {}'.format(
-                version, cls.__name__))
+            raise NotImplementedError(
+                'opset version {} of {} not implemented'.format(
+                    version, cls.__name__))
 
 
 class Elemwise(OnnxOpConverter):
