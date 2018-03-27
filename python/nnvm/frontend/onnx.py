@@ -15,34 +15,26 @@ class OnnxOpConverter(object):
     """ A helper class for holding onnx op converters.
     """
 
-    def __init__(self):
-        self.versions = [
-            int(d.replace('_impl_v', '')) for d in dir(self) if '_impl_v' in d
+    @classmethod
+    def get_converter(cls, opset):
+        versions = [
+            int(d.replace('_impl_v', '')) for d in dir(cls) if '_impl_v' in d
         ]
-
-    def get_converter(self, opset):
-        versions = sorted(self.versions + [opset])
+        versions = sorted(versions + [opset])
         version = versions[
             max([i for i, v in enumerate(versions) if v == opset]) - 1]
-        if hasattr(self, '_impl_v{}'.format(version)):
-            return getattr(self, '_impl_v{}'.format(version))
+        if hasattr(cls, '_impl_v{}'.format(version)):
+            return getattr(cls, '_impl_v{}'.format(version))
         else:
             raise NotImplementedError('opset version {} of {}'.format(
-                version, self.__class__.__name__))
+                version, cls.__name__))
 
 
 class Elemwise(OnnxOpConverter):
     """ A helper class for elemwise op converters.
-
-    Parameters
-    ----------
-    name : str
-        The name for the operator
     """
 
-    def __init__(self, name):
-        super(Elemwise, self).__init__()
-        self.name = name
+    name = ''
 
     @classmethod
     def _math_name_picker(cls, suffix):
@@ -54,10 +46,11 @@ class Elemwise(OnnxOpConverter):
 
         return _impl
 
-    def _impl_v1(self, inputs, attr, params):
+    @classmethod
+    def _impl_v1(cls, inputs, attr, params):
         assert len(inputs) == 2, "Math op take 2 inputs, {} given".format(
             len(inputs))
-        op_name = self._math_name_picker(self.name)(attr)
+        op_name = cls._math_name_picker(cls.name)(attr)
         axis = int(attr.get('axis', 0))
         conv_ops = ["conv2d", "conv2d_transpose"]
         if op_name == 'broadcast_add' and inputs[0].attr('op_name') in conv_ops:
@@ -68,20 +61,14 @@ class Elemwise(OnnxOpConverter):
 
 class Pool(OnnxOpConverter):
     """ A helper class for pool op converters.
-
-    Parameters
-    ----------
-    name : str
-        The name for the operator
     """
 
-    def __init__(self, name):
-        super(Pool, self).__init__()
-        self.name = name
+    name = ''
 
-    def _impl_v1(self, inputs, attr, params):
+    @classmethod
+    def _impl_v1(cls, inputs, attr, params):
         return AttrCvt(
-            op_name=_dimension_picker(self.name),
+            op_name=_dimension_picker(cls.name),
             transforms={
                 'kernel_shape': 'pool_size',
                 'pads': ('padding', (0, 0), _revert_caffe2_pad)
@@ -101,15 +88,11 @@ class Absolute(OnnxOpConverter):
 
 
 class Add(Elemwise):
-
-    def __init__(self):
-        super(Add, self).__init__('add')
+    name = 'add'
 
 
 class AveragePool(Pool):
-
-    def __init__(self):
-        super(AveragePool, self).__init__('avg_pool')
+    name = 'avg_pool'
 
 
 class BatchNorm(OnnxOpConverter):
@@ -164,9 +147,7 @@ class ConvTranspose(OnnxOpConverter):
 
 
 class Div(Elemwise):
-
-    def __init__(self):
-        super(Div, self).__init__('div')
+    name = 'div'
 
 
 class Elu(OnnxOpConverter):
@@ -200,15 +181,11 @@ class Gemm(OnnxOpConverter):
 
 
 class MaxPool(Pool):
-
-    def __init__(self):
-        super(MaxPool, self).__init__('max_pool')
+    name = 'max_pool'
 
 
 class Mul(Elemwise):
-
-    def __init__(self):
-        super(Mul, self).__init__('mul')
+    name = 'mul'
 
 
 class Pad(OnnxOpConverter):
@@ -309,14 +286,11 @@ class Softsign(OnnxOpConverter):
 
     @classmethod
     def _impl_v1(cls, inputs, attr, params):
-        return inputs[0] / (
-            1 + Absolute().get_converter(1)(inputs, attr, params))
+        return inputs[0] / (1 + Absolute.get_converter(1)(inputs, attr, params))
 
 
 class Sub(Elemwise):
-
-    def __init__(self):
-        super(Sub, self).__init__('sub')
+    name = 'sub'
 
 
 class Sum(OnnxOpConverter):
@@ -418,13 +392,13 @@ def _get_convert_map(opset):
         # defs/experimental
         'Identity': Renamer('copy'),
         # 'Affine'
-        'ThresholdedRelu': ThresholdedRelu().get_converter(opset),
-        'ScaledTanh': ScaledTanh().get_converter(opset),
-        'ParametricSoftplus': ParametricSoftPlus().get_converter(opset),
+        'ThresholdedRelu': ThresholdedRelu.get_converter(opset),
+        'ScaledTanh': ScaledTanh.get_converter(opset),
+        'ParametricSoftplus': ParametricSoftPlus.get_converter(opset),
         # 'ConstantFill'
         # 'GivenTensorFill'
         'FC': AttrCvt('dense', ignores=['axis', 'axis_w']),
-        'Scale': Scale().get_converter(opset),
+        'Scale': Scale.get_converter(opset),
         # 'GRUUnit'
         # 'ATen'
         # 'ImageScaler'
@@ -432,7 +406,7 @@ def _get_convert_map(opset):
         # 'Crop'
         # 'Embedding'
         # 'Upsample'
-        'SpatialBN': BatchNorm().get_converter(opset),
+        'SpatialBN': BatchNorm.get_converter(opset),
 
         # defs/generator
         # 'Constant'
@@ -444,49 +418,49 @@ def _get_convert_map(opset):
         # defs/logical
 
         # defs/math
-        'Add': Add().get_converter(opset),
-        'Sub': Sub().get_converter(opset),
-        'Mul': Mul().get_converter(opset),
-        'Div': Div().get_converter(opset),
+        'Add': Add.get_converter(opset),
+        'Sub': Sub.get_converter(opset),
+        'Mul': Mul.get_converter(opset),
+        'Div': Div.get_converter(opset),
         'Neg': Renamer('negative'),
-        'Abs': Absolute().get_converter(opset),
-        'Reciprocal': Reciprocal().get_converter(opset),
+        'Abs': Absolute.get_converter(opset),
+        'Reciprocal': Reciprocal.get_converter(opset),
         # 'Floor'
         # 'Ceil'
         'Sqrt': Renamer('sqrt'),
         'Relu': Renamer('relu'),
         'LeakyRelu': Renamer('leaky_relu'),
-        'Selu': Selu().get_converter(opset),
-        'Elu': Elu().get_converter(opset),
+        'Selu': Selu.get_converter(opset),
+        'Elu': Elu.get_converter(opset),
         'Exp': Renamer('exp'),
         'Log': Renamer('log'),
         'Tanh': Renamer('tanh'),
         # 'Pow'
-        'PRelu': Prelu().get_converter(opset),
+        'PRelu': Prelu.get_converter(opset),
         'Sigmoid': Renamer('sigmoid'),
         # 'HardSigmoid'
         # 'Max' : this is the elemwise maximum
         # 'Min' : this is the elemwise minimum
-        'Sum': Sum().get_converter(opset),
+        'Sum': Sum.get_converter(opset),
         # 'Mean'
         # 'Clip'
         # softmax default axis is different in onnx
         'Softmax': AttrCvt('softmax', {'axis': ('axis', 1)}),
         'LogSoftmax': AttrCvt('log_softmax', {'axis': ('axis', 1)}),
         # 'Hardmax'
-        'Softsign': Softsign().get_converter(opset),
-        'SoftPlus': SoftPlus().get_converter(opset),
-        'Gemm': Gemm().get_converter(opset),
+        'Softsign': Softsign.get_converter(opset),
+        'SoftPlus': SoftPlus.get_converter(opset),
+        'Gemm': Gemm.get_converter(opset),
         # 'MatMul'  batch stacked dot operation
 
         # defs/nn
-        'AveragePool': AveragePool().get_converter(opset),
-        'MaxPool': MaxPool().get_converter(opset),
-        'Conv': Conv().get_converter(opset),
-        'ConvTranspose': ConvTranspose().get_converter(opset),
+        'AveragePool': AveragePool.get_converter(opset),
+        'MaxPool': MaxPool.get_converter(opset),
+        'Conv': Conv.get_converter(opset),
+        'ConvTranspose': ConvTranspose.get_converter(opset),
         'GlobalAveragePool': Renamer('global_avg_pool2d'),
         'GlobalMaxPool': Renamer('global_max_pool2d'),
-        'BatchNormalization': BatchNorm().get_converter(opset),
+        'BatchNormalization': BatchNorm.get_converter(opset),
         # 'InstanceNormalization'
         # 'LpNormalization'
         'Dropout': AttrCvt('dropout', {'ratio': 'rate'}, ignores=['is_test']),
@@ -505,14 +479,14 @@ def _get_convert_map(opset):
 
         # defs/tensor
         'Cast': AttrCvt('cast', {'to': 'dtype'}),
-        'Reshape': Reshape().get_converter(opset),
+        'Reshape': Reshape.get_converter(opset),
         'Concat': Renamer('concatenate'),
         'Split': AttrCvt('split', {'split': 'indices_or_sections'}),
         # 'Slice'
         'Transpose': AttrCvt('transpose', {'perm': 'axes'}),
         # 'Gather'
         # 'Squeeze'
-        'Pad': Pad().get_converter(opset),
+        'Pad': Pad.get_converter(opset),
     }
 
 
