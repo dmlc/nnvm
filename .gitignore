@@ -25,6 +25,7 @@
 *.la
 *.a
 *.lib
+python/nnvm.egg-info/
 
 # Executables
 *.exe
