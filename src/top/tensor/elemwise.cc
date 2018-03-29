@@ -333,7 +333,7 @@ NNVM_REGISTER_INIT_OP(full)
 .add_arguments(InitOpWithScalarParam::__FIELDS__())
 .set_attr<FInferShape>("FInferShape", ZeroShape<InitOpWithScalarParam>)
 .set_attr<FInferType>("FInferType", ZeroType<InitOpWithScalarParam>)
-.set_support_level(1);
+.set_support_level(4);
 
 NNVM_REGISTER_INIT_OP(zeros)
 .describe(R"code(Fill target with zeros
@@ -345,7 +345,7 @@ NNVM_REGISTER_INIT_OP(zeros)
 .add_arguments(InitOpParam::__FIELDS__())
 .set_attr<FInferShape>("FInferShape", ZeroShape<InitOpParam>)
 .set_attr<FInferType>("FInferType", ZeroType<InitOpParam>)
-.set_support_level(1);
+.set_support_level(4);
 
 NNVM_REGISTER_INIT_OP(ones)
 .describe(R"code(Fill target with ones
@@ -357,7 +357,7 @@ NNVM_REGISTER_INIT_OP(ones)
 .add_arguments(InitOpParam::__FIELDS__())
 .set_attr<FInferShape>("FInferShape", ZeroShape<InitOpParam>)
 .set_attr<FInferType>("FInferType", ZeroType<InitOpParam>)
-.set_support_level(1);
+.set_support_level(4);
 
 // full_like
 NNVM_REGISTER_INIT_LIKE_OP(full_like)
@@ -368,21 +368,21 @@ as the input array
 .add_arguments(FillValueParam::__FIELDS__())
 .set_attr_parser(ParamParser<FillValueParam>)
 .set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<FillValueParam>)
-.set_support_level(1);
+.set_support_level(4);
 
 NNVM_REGISTER_INIT_LIKE_OP(zeros_like)
 .describe(R"code(Return an array of zeros with the same shape and type
 as the input array.
 
 )code")
-.set_support_level(1);
+.set_support_level(4);
 
 NNVM_REGISTER_INIT_LIKE_OP(ones_like)
 .describe(R"code(Return an array of ones with the same shape and type
 as the input array.
 
 )code")
-.set_support_level(1);
+.set_support_level(4);
 
 // unary scalar op
 DMLC_REGISTER_PARAMETER(ScalarParam);
@@ -609,7 +609,8 @@ NNVM_REGISTER_ELEMWISE_REDUCE_OP(elemwise_sum)
       ret.push_back(MakeNode("copy", n->attrs.name + "_grad_0", {ograds[0]}));
     }
     return ret;
-  });
+  })
+.set_support_level(4);
 
 NNVM_REGISTER_ELEMWISE_UNARY_OP(block_grad)
 .describe(R"code(Blocks gradient computation for input.
@@ -619,7 +620,8 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(block_grad)
   "FInplaceIdentity", [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
 })
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.set_support_level(4);
 
 DMLC_REGISTER_PARAMETER(IndicatorParam);
 
@@ -633,7 +635,7 @@ with 1.0 if (left > right), otherwise 0.0 element-wise.
 .add_argument("rhs", "Tensor", "Second input")
 .set_num_inputs(2)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
-.set_support_level(1);
+.set_support_level(4);
 
 
 NNVM_REGISTER_INDICATOR_OP(less)
@@ -645,7 +647,7 @@ with 1.0 if (left < right), otherwise 0.0 element-wise.
 .add_argument("rhs", "Tensor", "Second input")
 .set_num_inputs(2)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
-.set_support_level(1);
+.set_support_level(4);
 
 NNVM_REGISTER_INDICATOR_OP(_max_mask)
   .describe(R"code(Function that returns a mask tensor
@@ -738,7 +740,8 @@ Example::
       MakeNode("elemwise_mul", n->attrs.name + "_grad",
                {sub7, ograds[0]})
     };
-  });
+  })
+.set_support_level(4);
 
 }  // namespace top
 }  // namespace nnvm

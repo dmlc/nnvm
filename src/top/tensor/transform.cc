@@ -266,7 +266,7 @@ Examples::
       MakeNode("zeros_like", n->attrs.name + "_zero_grad", {n->inputs[1]})
     };
   })
-  .set_support_level(1);
+  .set_support_level(4);
 
 // split
 DMLC_REGISTER_PARAMETER(SplitParam);
@@ -586,7 +586,7 @@ the input array into an output array with the same shape as the second input arr
       MakeNode("zeros_like", n->attrs.name + "_zero_grad", { n->inputs[1]})
     };
 })
-.set_support_level(3);
+.set_support_level(4);
 
 // squeeze
 DMLC_REGISTER_PARAMETER(SqueezeParam);
