@@ -318,6 +318,14 @@ DMLC_REGISTER_PARAMETER(InitOpParam);
 DMLC_REGISTER_PARAMETER(InitOpWithScalarParam);
 DMLC_REGISTER_PARAMETER(FillValueParam);
 
+inline Array<Tensor> fill_const(const Tensor& x, float scalar_val) {
+  Tensor filled = compute(x->shape, [&](const Array<Var>& i) {
+      auto scalar_const = make_const(x->dtype, scalar_val);
+      return scalar_const;
+    }, "tensor", topi::kElementWise);
+  return Array<Tensor>{ filled };
+}
+
 // full
 NNVM_REGISTER_INIT_OP(full)
 .describe(R"code(Fill array with scalar value
@@ -329,6 +337,14 @@ NNVM_REGISTER_INIT_OP(full)
 .add_arguments(InitOpWithScalarParam::__FIELDS__())
 .set_attr<FInferShape>("FInferShape", ZeroShape<InitOpWithScalarParam>)
 .set_attr<FInferType>("FInferType", ZeroType<InitOpWithScalarParam>)
+.set_attr<FTVMCompute>(
+  "FTVMCompute", [](const NodeAttrs& attrs,
+                    const Array<Tensor>& inputs,
+                    const Array<Tensor>& out_info) {
+  const auto& param = nnvm::get<InitOpWithScalarParam>(attrs.parsed);
+  auto scalar_val = static_cast<float>(param.fill_value);
+  return fill_const(inputs[0], scalar_val);
+})
 .set_support_level(1);
 
 NNVM_REGISTER_INIT_OP(zeros)
@@ -341,6 +357,12 @@ NNVM_REGISTER_INIT_OP(zeros)
 .add_arguments(InitOpParam::__FIELDS__())
 .set_attr<FInferShape>("FInferShape", ZeroShape<InitOpParam>)
 .set_attr<FInferType>("FInferType", ZeroType<InitOpParam>)
+.set_attr<FTVMCompute>(
+  "FTVMCompute", [](const NodeAttrs& attrs,
+                    const Array<Tensor>& inputs,
+                    const Array<Tensor>& out_info) {
+  return fill_const(out_info[0], 0.0f);
+})
 .set_support_level(1);
 
 NNVM_REGISTER_INIT_OP(ones)
@@ -353,6 +375,12 @@ NNVM_REGISTER_INIT_OP(ones)
 .add_arguments(InitOpParam::__FIELDS__())
 .set_attr<FInferShape>("FInferShape", ZeroShape<InitOpParam>)
 .set_attr<FInferType>("FInferType", ZeroType<InitOpParam>)
+.set_attr<FTVMCompute>(
+  "FTVMCompute", [](const NodeAttrs& attrs,
+                    const Array<Tensor>& inputs,
+                    const Array<Tensor>& out_info) {
+  return fill_const(out_info[0], 1.0f);
+})
 .set_support_level(1);
 
 // full_like
@@ -364,6 +392,14 @@ as the input array
 .add_arguments(FillValueParam::__FIELDS__())
 .set_attr_parser(ParamParser<FillValueParam>)
 .set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<FillValueParam>)
+.set_attr<FTVMCompute>(
+  "FTVMCompute", [](const NodeAttrs& attrs,
+                    const Array<Tensor>& inputs,
+                    const Array<Tensor>& out_info) {
+  const auto& param = nnvm::get<FillValueParam>(attrs.parsed);
+  auto scalar_val = static_cast<float>(param.fill_value);
+  return fill_const(inputs[0], scalar_val);
+})
 .set_support_level(1);
 
 NNVM_REGISTER_INIT_LIKE_OP(zeros_like)
@@ -371,6 +407,12 @@ NNVM_REGISTER_INIT_LIKE_OP(zeros_like)
 as the input array.
 
 )code")
+.set_attr<FTVMCompute>(
+  "FTVMCompute", [](const NodeAttrs& attrs,
+                    const Array<Tensor>& inputs,
+                    const Array<Tensor>& out_info) {
+  return fill_const(inputs[0], 0.0f);
+})
 .set_support_level(1);
 
 NNVM_REGISTER_INIT_LIKE_OP(ones_like)
@@ -378,6 +420,12 @@ NNVM_REGISTER_INIT_LIKE_OP(ones_like)
 as the input array.
 
 )code")
+.set_attr<FTVMCompute>(
+  "FTVMCompute", [](const NodeAttrs& attrs,
+                    const Array<Tensor>& inputs,
+                    const Array<Tensor>& out_info) {
+  return fill_const(inputs[0], 1.0f);
+})
 .set_support_level(1);
 
 // unary scalar op

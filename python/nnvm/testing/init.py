@@ -107,3 +107,18 @@ class Xavier(Initializer):
             arr[:] = np.random.uniform(-scale, scale, size=arr.shape)
         else:
             raise ValueError("Unknown random type")
+
+
+class Constant(Initializer):
+    """ Constant initialization for weights
+
+    Parameters
+    ----------
+    val: float
+        The constant fill value.
+    """
+    def __init__(self, val):
+        super(Constant, self).__init__(val=val)
+
+    def _init_weight(self, name, arr):
+        arr[:] = self.val

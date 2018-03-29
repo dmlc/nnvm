@@ -76,6 +76,12 @@ reg.register_schedule("negative", _fschedule_broadcast)
 reg.register_pattern("sigmoid", OpPattern.ELEMWISE)
 reg.register_schedule("sigmoid", _fschedule_broadcast)
 
+for fn in ("full", "ones", "zeros"):
+    reg.register_pattern(fn, OpPattern.ELEMWISE)
+    reg.register_schedule(fn, _fschedule_broadcast)
+    reg.register_pattern(fn + "_like", OpPattern.ELEMWISE)
+    reg.register_schedule(fn + "_like", _fschedule_broadcast)
+
 # add_scalar
 reg.register_pattern("__add_scalar__", OpPattern.ELEMWISE)
 reg.register_schedule("__add_scalar__", _fschedule_broadcast)
