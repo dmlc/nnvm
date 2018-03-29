@@ -143,3 +143,7 @@ reg.register_schedule("broadcast_div", _fschedule_broadcast)
 # broadcast_to
 reg.register_pattern("broadcast_to", OpPattern.BROADCAST)
 reg.register_schedule("broadcast_to", _fschedule_broadcast)
+
+# matmul
+reg.register_pattern("matmul", OpPattern.BROADCAST)
+reg.register_schedule("matmul", _fschedule_broadcast)

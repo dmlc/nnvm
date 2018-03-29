@@ -1,3 +1,4 @@
+import copy
 import numpy as np
 import tvm
 from tvm.contrib import graph_runtime
@@ -7,41 +8,47 @@ import nnvm.compiler
 from nnvm.testing.config import ctx_list
 
 
-def helper(symbol, inputs, dtype,
-           np_forward, np_backward=None):
-    ishapes = {}
-    input_syms = []
+def helper(symbol, inputs, dtype, np_forward, np_backward=None, **kwargs):
+    input_shapes = {}
+    input_symbols = []
     np_inputs = {}
     for (k, v) in inputs.items():
-        ishapes.update({k: v[0]})
+        input_shapes.update({k: v[0]})
         np_inputs.update({k: np.random.uniform(size=v[0]).astype(dtype)})
         if len(v) > 1:
-            input_syms.append(v[1])
+            input_symbols.append(v[1])
+
+    # put additional kwargs for np forward
+    np_inputs_with_addtional_args = copy.copy(np_inputs)
+    np_inputs_with_addtional_args.update(**kwargs)
 
     for target, ctx in ctx_list():
-        graph, lib, _ = nnvm.compiler.build(symbol, target, ishapes)
-        m = graph_runtime.create(graph, lib, ctx)
-        m.run(**np_inputs)
-        y_np = np_forward(**np_inputs)
-        out = m.get_output(0, tvm.nd.empty(y_np.shape, dtype))
+        graph, lib, _ = nnvm.compiler.build(symbol, target, input_shapes)
+        module = graph_runtime.create(graph, lib, ctx)
+        module.run(**np_inputs)
+        y_np = np_forward(**np_inputs_with_addtional_args)
+        out = module.get_output(0, tvm.nd.empty(y_np.shape, dtype))
         np.testing.assert_allclose(out.asnumpy(), y_np, atol=1e-5, rtol=1e-5)
 
         # backward
         if np_backward:
             graph._set_symbol_list_attr("grad_ys", symbol)
-            for x in input_syms:
-                graph._set_symbol_list_attr("grad_xs", x)
+            graph._set_symbol_list_attr("grad_xs", input_symbols)
             graph._set_symbol_list_attr("grad_ys_out_grad", sym.Variable("head_grads"))
             graph = graph.apply("Gradient")
-            ishapes.update({"head_grads": y_np.shape})
-            graph, lib, _ = nnvm.compiler.build(graph, target, ishapes)
-            m = graph_runtime.create(graph, lib, ctx)
+            input_shapes.update({"head_grads": y_np.shape})
+            graph, lib, _ = nnvm.compiler.build(graph, target, input_shapes)
+            module = graph_runtime.create(graph, lib, ctx)
             head_grads = np.random.uniform(size=y_np.shape).astype(dtype)
-            y_np = head_grads * np_backward(**np_inputs)
-            m.run(head_grads=head_grads, **np_inputs)
-            out = m.get_output(0, tvm.nd.empty(y_np.shape, dtype))
-
-            np.testing.assert_allclose(out.asnumpy(), y_np, atol=1e-5, rtol=1e-5)
+            np_inputs_with_head_gradients = copy.copy(np_inputs_with_addtional_args)
+            np_inputs_with_head_gradients.update({'head_gradient': head_grads})
+            np_gradients = np_backward(**np_inputs_with_head_gradients)
+            if not isinstance(np_gradients, list):
+                np_gradients = [np_gradients]
+            module.run(head_grads=head_grads, **np_inputs)
+            for i in range(len(np_gradients)):
+                out = module.get_output(i, tvm.nd.empty(np_gradients[i].shape, dtype))
+                np.testing.assert_allclose(out.asnumpy(), np_gradients[i], atol=1e-5, rtol=1e-5)
 
 
 def test_relu():
@@ -66,8 +73,8 @@ def test_sym_scalar_pow():
     def forward(x):
         return x**scalar
 
-    def backward(x):
-        return scalar * x**(scalar -  1)
+    def backward(x, head_gradient):
+        return scalar * x**(scalar - 1) * head_gradient
 
     dtype = "float32"
     dshape = (1, 3, 32, 32)
@@ -83,8 +90,8 @@ def test_scalar_sym_pow():
     def forward(x):
         return scalar**x
 
-    def backward(x):
-        return np.log(scalar) * scalar**x
+    def backward(x, head_gradient):
+        return np.log(scalar) * scalar**x * head_gradient
 
     dtype = "float32"
     dshape = (1, 3, 32, 32)
@@ -99,8 +106,8 @@ def test_exp():
     def forward(x):
         return np.exp(x)
 
-    def backward(x):
-        return np.exp(x)
+    def backward(x, head_gradient):
+        return np.exp(x) * head_gradient
 
     dtype = "float32"
     dshape = (1, 3, 32, 32)
@@ -115,8 +122,8 @@ def test_log():
     def forward(x):
         return np.log(x)
 
-    def backward(x):
-        return 1. / x
+    def backward(x, head_gradient):
+        return 1. / x * head_gradient
 
     dtype = "float32"
     dshape = (1, 3, 32, 32)
@@ -131,9 +138,9 @@ def test_tanh():
     def forward(x):
         return np.sinh(x) / np.cosh(x)
 
-    def backward(x):
+    def backward(x, head_gradient):
         y_np = forward(x)
-        return (1 - y_np**2)
+        return (1 - y_np**2) * head_gradient
 
     dtype = "float32"
     dshape = (1, 3, 32, 32)
@@ -148,9 +155,9 @@ def test_sigmoid():
     def forward(x):
         return 1.0 / (1.0 + np.exp(-x))
 
-    def backward(x):
+    def backward(x, head_gradient):
         y_np = forward(x)
-        return y_np *(1 - y_np)
+        return y_np *(1 - y_np) * head_gradient
 
     dtype = "float32"
     dshape = (1, 3, 32, 32)
@@ -308,6 +315,57 @@ def test_pad():
     helper(y, inputs, dtype, forward)
 
 
+def test_matmul():
+    lhs = sym.Variable('lhs')
+    rhs = sym.Variable('rhs')
+    result = sym.matmul(lhs, rhs)
+
+    def forward(lhs, rhs, transpose_a=False, transpose_b=False):
+        if transpose_a:
+            lhs = lhs.T
+        if transpose_b:
+            rhs = rhs.T
+        return np.matmul(lhs, rhs)
+
+    def backward(lhs, rhs, head_gradient, transpose_a=False, transpose_b=False):
+        grad_a = None
+        grad_b = None
+        if not transpose_a and not transpose_b:
+            grad_a = np.matmul(head_gradient, rhs.T)
+            grad_b = np.matmul(lhs.T, head_gradient)
+        elif transpose_a and not transpose_b:
+            grad_a = np.matmul(rhs, head_gradient.T)
+            grad_b = np.matmul(lhs, head_gradient)
+        elif not transpose_a and transpose_b:
+            grad_a = np.matmul(head_gradient, rhs)
+            grad_b = np.matmul(head_gradient.T, lhs)
+        else:
+            grad_a = np.matmul(rhs.T, head_gradient.T)
+            grad_b = np.matmul(head_gradient.T, lhs.T)
+        return [grad_a, grad_b]
+
+    dtype = "float32"
+    inputs = {
+        'lhs': ((1, 3), lhs),
+        'rhs': ((3, 4), rhs),
+
+    }
+    helper(result, inputs, dtype, forward, backward)
+
+    # with transpose
+    lhs = sym.Variable('lhs')
+    rhs = sym.Variable('rhs')
+    result = sym.matmul(lhs, rhs, transpose_a=False, transpose_b=True)
+
+    dtype = "float32"
+    inputs = {
+        'lhs': ((1, 3), lhs),
+        'rhs': ((4, 3), rhs),
+    }
+
+    helper(result, inputs, dtype, forward, backward, transpose_b=True)
+
+
 if __name__ == "__main__":
     test_split()
     test_concatenate()
@@ -324,3 +382,4 @@ if __name__ == "__main__":
     test_softmax()
     test_squeeze()
     test_pad()
+    test_matmul()

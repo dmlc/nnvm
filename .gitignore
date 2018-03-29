@@ -57,3 +57,8 @@ cat.jpg
 
 # Jetbrain
 .idea
+cmake-build-debug/*
+
+# build
+python/dist/*
+python/nnvm.egg-info/*
