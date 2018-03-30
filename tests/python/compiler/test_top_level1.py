@@ -180,7 +180,7 @@ def test_softmax():
     dtype = "float32"
     dshape = (10, 1000)
     inputs = [('x', dshape, x)]
-    helper(y, inputs, dtype, forward), backward
+    helper(y, inputs, dtype, forward, backward)
 
 
 def test_log_softmax():
@@ -210,13 +210,19 @@ def test_dense():
 
     def forward(x, dense_weight, dense_bias):
         return np.dot(x, dense_weight.T) + dense_bias
+
+    def backward(head_grads, x, dense_weight, dense_bias):
+        return [np.dot(head_grads, dense_weight),
+               np.dot(head_grads.T, x),
+               np.sum(head_grads, axis=0)]
+
     dtype = "float32"
     inputs = [
         ('x', (10, 100), x),
         ('dense_weight', (3, 100), w),
         ('dense_bias', (3,), b)
     ]
-    helper(y, inputs, dtype, forward)
+    helper(y, inputs, dtype, forward, backward)
 
 
 def test_batchnorm():
@@ -329,6 +335,320 @@ def test_pad():
     helper(y, inputs, dtype, forward)
 
 
+def test_clip():
+    x = sym.Variable("x")
+    a_min=0.2
+    a_max=0.75
+    y = sym.clip(x, a_min=a_min, a_max=a_max)
+
+    def forward(x):
+        return np.clip(x, a_min=a_min, a_max=a_max)
+
+    def backward(head_grads, x):
+        mask1 = np.greater_equal(x, a_min).astype("float")
+        mask2 = np.less_equal(x, a_max).astype("float")
+        return [head_grads * mask1 * mask2]
+
+
+    dtype = "float32"
+    inputs = [('x', (3, 4, 5), x)]
+    helper(y, inputs, dtype, forward, backward)
+
+
+def test_assign():
+    x = sym.Variable("x")
+    y = sym.Variable("y")
+    z = sym.assign(x, y)
+
+    def forward(x, y):
+        return y
+
+    def backward(head_grads, x, y):
+        return [np.zeros_like(head_grads), head_grads]
+
+
+    dtype = "float32"
+    inputs = [('x', (3, 4, 5), x),
+              ('y', (3, 4, 5), y)]
+    helper(z, inputs, dtype, forward, backward, need_input=False)
+
+
+def verify_elemwise_sum(num_args):
+    s = [sym.Variable("input" + str(i)) for i in range(num_args)]
+    y = sym.elemwise_sum(*s, num_args=num_args)
+
+    def forward(**inputs):
+        return np.sum(np.array(inputs.values()), axis=0)
+
+    def backward(head_grads, **inputs):
+        return [head_grads] * num_args
+
+    dtype = "float32"
+    inputs = [("input" + str(i), (3, 4, 5), s[i])
+              for i in range(num_args)]
+    helper(y, inputs, dtype, forward, backward, need_input=False)
+
+
+def test_elemwise_sum():
+    verify_elemwise_sum(1)
+    verify_elemwise_sum(5)
+    verify_elemwise_sum(7)
+
+
+def test_full():
+    shape = (3, 4, 5)
+    value = 7
+    dtype = "float32"
+    for target, ctx in ctx_list():
+        data = sym.Variable("data", dtype=dtype)
+        # full_like
+        s = sym.full_like(data=data, fill_value=value, name="s")
+        graph, lib, _ = nnvm.compiler.build(s, target, {"data": shape})
+        m = graph_runtime.create(graph, lib, ctx)
+        m.run(data=np.random.uniform(size=shape).astype(dtype))
+        out = m.get_output(0, tvm.nd.empty(shape, dtype=dtype))
+        np.testing.assert_allclose(
+            out.asnumpy(),
+            np.full(shape, fill_value=value, dtype=dtype),
+            atol=1e-5, rtol=1e-5)
+        # ones_like
+        s = sym.ones_like(data=data, fill_value=value, name="s")
+        graph, lib, _ = nnvm.compiler.build(s, target, {"data": shape})
+        m = graph_runtime.create(graph, lib, ctx)
+        m.run(data=np.random.uniform(size=shape).astype(dtype))
+        out = m.get_output(0, tvm.nd.empty(shape, dtype=dtype))
+        np.testing.assert_allclose(
+            out.asnumpy(),
+            np.full(shape, fill_value=1, dtype=dtype),
+            atol=1e-5, rtol=1e-5)
+        # zeros_like
+        s = sym.zeros_like(data=data, fill_value=value, name="s")
+        graph, lib, _ = nnvm.compiler.build(s, target, {"data": shape})
+        m = graph_runtime.create(graph, lib, ctx)
+        m.run(data=np.random.uniform(size=shape).astype(dtype))
+        out = m.get_output(0, tvm.nd.empty(shape, dtype=dtype))
+        np.testing.assert_allclose(
+            out.asnumpy(),
+            np.full(shape, fill_value=0, dtype=dtype),
+            atol=1e-5, rtol=1e-5)
+        # full
+        s = sym.full(shape=shape, dtype=dtype, fill_value=value, name="s")
+        graph, lib, _ = nnvm.compiler.build(s, target)
+        m = graph_runtime.create(graph, lib, ctx)
+        m.run()
+        out = m.get_output(0, tvm.nd.empty(shape, dtype=dtype))
+        np.testing.assert_allclose(
+            out.asnumpy(),
+            np.full(shape, fill_value=value, dtype=dtype),
+            atol=1e-5, rtol=1e-5)
+        # ones
+        s = sym.ones(shape=shape, dtype=dtype, name="s")
+        graph, lib, _ = nnvm.compiler.build(s, target)
+        m = graph_runtime.create(graph, lib, ctx)
+        m.run()
+        out = m.get_output(0, tvm.nd.empty(shape, dtype=dtype))
+        np.testing.assert_allclose(
+            out.asnumpy(),
+            np.full(shape, fill_value=1, dtype=dtype),
+            atol=1e-5, rtol=1e-5)
+        # zeros
+        s = sym.zeros(shape=shape, dtype=dtype, name="s")
+        graph, lib, _ = nnvm.compiler.build(s, target)
+        m = graph_runtime.create(graph, lib, ctx)
+        m.run()
+        out = m.get_output(0, tvm.nd.empty(shape, dtype=dtype))
+        np.testing.assert_allclose(
+            out.asnumpy(),
+            np.full(shape, fill_value=0, dtype=dtype),
+            atol=1e-5, rtol=1e-5)
+
+
+def test_block_grad():
+    x = sym.Variable("x")
+    y = sym.block_grad(x)
+
+    def forward(x):
+        return x
+
+    def backward(head_grads, x):
+        return [np.zeros_like(head_grads)]
+
+
+    dtype = "float32"
+    inputs = [('x', (3, 4, 5), x)]
+    helper(y, inputs, dtype, forward, backward, need_head_grads=False)
+
+
+def test_greater():
+    l = sym.Variable("l")
+    r = sym.Variable("r")
+    y = sym.greater(l, r)
+
+    def forward(l, r):
+        return np.greater(l, r).astype("float32")
+
+    def backward(head_grads, l, r):
+        return [np.zeros_like(l)]
+
+
+    dtype = "float32"
+    inputs = [('l', (3, 4, 5), l),
+              ('r', (3, 4, 5), r)]
+    helper(y, inputs, dtype, forward, backward, need_head_grads=False)
+
+
+def test_less():
+    l = sym.Variable("l")
+    r = sym.Variable("r")
+    y = sym.less(l, r)
+
+    def forward(l, r):
+        return np.less(l, r).astype("float32")
+
+    def backward(head_grads, l, r):
+        return [np.zeros_like(l)]
+
+
+    dtype = "float32"
+    inputs = [('l', (3, 4, 5), l),
+              ('r', (3, 4, 5), r)]
+    helper(y, inputs, dtype, forward, backward, need_head_grads=False)
+
+
+def test_reshape_like():
+    x = sym.Variable("x")
+    y = sym.Variable("y")
+    z = sym.reshape_like(x, y)
+
+    def forward(x, y):
+        return np.reshape(x, y.shape)
+
+    def backward(head_grads, x, y):
+        return [np.reshape(head_grads, x.shape),
+                np.zeros_like(y)]
+
+
+    dtype = "float32"
+    inputs = [('x', (3, 4, 5), x),
+              ('y', (5, 4, 3), y)]
+    helper(z, inputs, dtype, forward, backward)
+
+
+def verify_expand_like(in_shape, out_shape, axis, exclude):
+    x = sym.Variable("x")
+    y = sym.Variable("y")
+    z = sym.expand_like(x, y, axis=axis, exclude=exclude)
+
+    def forward(x, y):
+        odim = len(out_shape)
+        real_axis = [i if i >= 0 else i + odim for i in axis]
+        real_axis = sorted(real_axis)
+        if exclude:
+            real_axis = list(set(range(odim)) - set(real_axis))
+        for i in real_axis:
+            x = np.expand_dims(x, i).astype(x.dtype)
+        for i in real_axis:
+            x = np.concatenate([x]*out_shape[i], axis=i).astype(x.dtype)
+
+        return x
+
+    def backward(head_grads, x, y):
+        odim = len(out_shape)
+        real_axis = [i if i >= 0 else i + odim for i in axis]
+        real_axis = sorted(real_axis)
+        if exclude:
+            real_axis = list(set(range(odim)) - set(real_axis))
+        return [np.sum(head_grads, axis=tuple(real_axis)),
+                np.zeros_like(y)]
+
+
+    dtype = "float32"
+    inputs = [('x', in_shape, x),
+              ('y', out_shape, y)]
+    helper(z, inputs, dtype, forward, backward, need_input=False)
+
+
+def test_expand_like():
+    verify_expand_like((3,), (2, 3), [0], False)
+    verify_expand_like((2,), (2, 3), [1], False)
+    verify_expand_like((3, 4), (3, 5, 4), [1], False)
+    verify_expand_like((5, 7), (5, 6, 7, 8), [0, -2], True)
+
+
+def verify_matmul(l_shape, r_shape, transpose_a, transpose_b):
+    l = sym.Variable("l")
+    r = sym.Variable("r")
+    z = sym.matmul(l, r,
+                   transpose_a=transpose_a,
+                   transpose_b=transpose_b)
+
+    def forward(l, r):
+        if len(l.shape) == 1:
+            l = np.array([l])
+        if len(r.shape) == 1:
+            r = np.array([r])
+        if transpose_a:
+            l = np.transpose(l)
+        if transpose_b:
+            r = np.transpose(r)
+        if len(r.shape) > 2:
+            reorder = range(len(r.shape))
+            r = np.transpose(r, [reorder[-2]] + reorder[:-2] + [reorder[-1]])
+        return np.dot(l, r)
+
+    def backward(head_grads, l, r):
+        if len(l.shape) == 1:
+            l = np.array([l])
+        if len(r.shape) == 1:
+            r = np.array([r])
+        if transpose_a:
+            l = np.transpose(l)
+        if transpose_b:
+            r = np.transpose(r)
+
+        ret = []
+        if len(r.shape) > 2:
+            reorder = range(len(r.shape))
+            r = np.transpose(r, [reorder[-2]] + reorder[:-2] + [reorder[-1]])
+        ret.append(head_grads.dot(r.T))
+
+        if len(head_grads) > 2:
+            reorder = range(len(head_grads.shape))
+            head_grads = np.transpose(head_grads, [reorder[-2]] + reorder[:-2] + [reorder[-1]])
+        ret.append(l.T.dot(head_grads))
+
+        if transpose_a:
+            ret[0] = np.transpose(ret[0])
+        if transpose_a:
+            ret[1] = np.transpose(ret[1])
+
+        return ret
+
+    dtype = "float32"
+    inputs = [('l', l_shape, l),
+              ('r', r_shape, r)]
+    if len(l_shape) <= 2 and len(r_shape) <= 2:
+        helper(z, inputs, dtype, forward, backward)
+    else:
+        helper(z, inputs, dtype, forward)
+
+
+def test_matmul():
+    verify_matmul((3, 4, 5), (5, 6), False, False)
+    verify_matmul((5, 4, 3), (6, 5), True, True)
+    verify_matmul((3, 4, 5), (6, 5), False, True)
+    verify_matmul((2, 2), (2, 1), True, False)
+    verify_matmul((5, 4, 3), (5, 6), True, False)
+    verify_matmul((3, 5), (5, 6, 8), False, False)
+    verify_matmul((5, 3), (8, 6, 5), True, True)
+    verify_matmul((3, 5), (8, 6, 5), False, True)
+    verify_matmul((5, 3), (5, 6, 8), True, False)
+    verify_matmul((5,), (5, 1), False, False)
+    verify_matmul((5,), (5, 6, 7), False, False)
+    verify_matmul((5,), (5, ), False, True)
+    verify_matmul((5,), (5,), True, False)
+
+
 if __name__ == "__main__":
     test_split()
     test_concatenate()
@@ -345,3 +665,14 @@ if __name__ == "__main__":
     test_softmax()
     test_squeeze()
     test_pad()
+    test_clip()
+    test_assign()
+    test_elemwise_sum()
+    test_full()
+    test_block_grad()
+    test_greater()
+    test_less()
+    test_reshape_like()
+    test_expand_like()
+    test_matmul()
+

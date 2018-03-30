@@ -91,14 +91,14 @@ If ``use_bias`` is set to be false, then the ``bias`` term is ignored.
                                    n->attrs.name + "_data_grad",
                                    {ograds[0], n->inputs[DenseParam::kWeight]});
     NodeEntry w_grad_sub = MakeNode("matmul",
-                                     n->attrs.name + "_weight_grad_sub0",
+                                     n->attrs.name + "_weight_grad_sub",
                                      {ograds[0], n->inputs[DenseParam::kData]},
                                      {{"transpose_a", "true"}});
-    TShape w_reduce_axis = {0, -1};
-    std::ostringstream w_oss; w_oss << w_reduce_axis;
-    NodeEntry w_grad = MakeNode("sum", n->attrs.name + "_weight_grad",
-                                {w_grad_sub},
-                                {{"axis", w_oss.str()}, {"exclude", "true"}});
+  TShape w_reduce_axis = {0, -1};
+  std::ostringstream w_oss; w_oss << w_reduce_axis;
+  NodeEntry w_grad = MakeNode("sum", n->attrs.name + "_weight_grad",
+                              {w_grad_sub},
+                              {{"axis", w_oss.str()}, {"exclude", "true"}});
     std::vector<NodeEntry> grads = {data_grad, w_grad};
 
     if (param.use_bias) {
@@ -295,22 +295,23 @@ NNVM_REGISTER_OP(softmax)
     // [ ...                  ,-ynyn + yn]
     //
     // grad_x =
-    // [-y1*(ograd1*y1 - 1 + ograd2*y2 + ..., -y2*(ograd1*y1 - 1 + ograd2*y2, ..., ...]]
-
-    // grad_x = ograd elemwise_mul output
-    // grad_x = sum(grad_x, keepdim, axis)
-    // grad_x = grad_x broadcast_mul output
-    // grad_x = neg grad_x
-    // grad_x = grad_x + output
+    // [[-y1*(ograd1*(y1 - 1) + ograd2*y2 + ..., -y2*(ograd1*y1 + ograd2*(y2 - 1), ..., ...]
+    //  ...                               ...                                       ...
+    //  ...                               ...                                       ...]]
+    // sub0 = ograd elemwise_mul output
+    // sub1 = sum(sub0, keepdim, axis)
+    // sub2 = ograd elemwise_mul sub1
+    // sub3 = neg sub2
+    // grad_x = sub3 + sub0
     const SoftmaxParam& param = nnvm::get<SoftmaxParam>(n->attrs.parsed);
     NodeEntry output =  NodeEntry{n, 0, 0};
     NodeEntry sub0 = MakeNode("elemwise_mul", n->attrs.name + "_grad_sub0", {ograds[0], output});
     NodeEntry sub1 = MakeNode("sum", n->attrs.name + "_grad_sub1", {sub0},
                               {{"axis", std::to_string(param.axis)}, {"keepdims", "true"}});
-    NodeEntry sub2 = MakeNode("broadcast_mul", n->attrs.name + "_grad_sub2", {sub1, output});
+    NodeEntry sub2 = MakeNode("broadcast_mul", n->attrs.name + "_grad_sub2", {output, sub1});
     NodeEntry sub3 = MakeNode("negative", n->attrs.name + "_grad_sub3", {sub2});
     return std::vector<NodeEntry> {
-      MakeNode("elemwise_add", n->attrs.name + "_grad", {sub3, output})
+      MakeNode("elemwise_add", n->attrs.name + "_grad", {sub3, sub0})
     };
 });
 
@@ -351,12 +352,13 @@ NNVM_REGISTER_OP(log_softmax)
     // [ ...                ,-yn + 1]
     //
     // grad_x =
-    // [-(ograd1*y1 - 1 + ograd2*y2 + ..., -(ograd1*y1 - 1 + ograd2*y2, ..., ...]]
+    // [-(ograd1*y1 - ograd1 + ograd2*y2 + ..., -(ograd1*y1 - ograd2 + ograd2*y2, ..., ...]]
 
-    // grad_x = ograd elemwise_mul output
+    // sub0 = ograd elemwise_mul output
     // grad_x = sum(grad_x, keepdim, axis)
     // grad_x = neg grad_x
     // grad_x = grad_x + ones_like(grad_x)
+    // grad_x = expand_like(grad_x, axis)
     const SoftmaxParam& param = nnvm::get<SoftmaxParam>(n->attrs.parsed);
     NodeEntry output =  NodeEntry{n, 0, 0};
     NodeEntry sub0 = MakeNode("elemwise_mul", n->attrs.name + "_grad_sub0", {ograds[0], output});

@@ -50,67 +50,67 @@ reg.register_schedule("_assign", _fschedule_broadcast)
 
 # copy
 reg.register_pattern("copy", OpPattern.ELEMWISE)
-reg.register_schedule("copy", _fschedule_broadcast)
+reg.register_schedule("copy", _fschedule_elemwise)
 
 # exp
 reg.register_pattern("exp", OpPattern.ELEMWISE)
-reg.register_schedule("exp", _fschedule_broadcast)
+reg.register_schedule("exp", _fschedule_elemwise)
 
 # sqrt
 reg.register_pattern("sqrt", OpPattern.ELEMWISE)
-reg.register_schedule("sqrt", _fschedule_broadcast)
+reg.register_schedule("sqrt", _fschedule_elemwise)
 
 # log
 reg.register_pattern("log", OpPattern.ELEMWISE)
-reg.register_schedule("log", _fschedule_broadcast)
+reg.register_schedule("log", _fschedule_elemwise)
 
 # tanh
 reg.register_pattern("tanh", OpPattern.ELEMWISE)
-reg.register_schedule("tanh", _fschedule_broadcast)
+reg.register_schedule("tanh", _fschedule_elemwise)
 
 # negative
 reg.register_pattern("negative", OpPattern.ELEMWISE)
-reg.register_schedule("negative", _fschedule_broadcast)
+reg.register_schedule("negative", _fschedule_elemwise)
 
 # sigmoid
 reg.register_pattern("sigmoid", OpPattern.ELEMWISE)
-reg.register_schedule("sigmoid", _fschedule_broadcast)
+reg.register_schedule("sigmoid", _fschedule_elemwise)
 
 # add_scalar
 reg.register_pattern("__add_scalar__", OpPattern.ELEMWISE)
-reg.register_schedule("__add_scalar__", _fschedule_broadcast)
+reg.register_schedule("__add_scalar__", _fschedule_elemwise)
 
 # sub_calar
 reg.register_pattern("__sub_scalar__", OpPattern.ELEMWISE)
-reg.register_schedule("__sub_scalar__", _fschedule_broadcast)
+reg.register_schedule("__sub_scalar__", _fschedule_elemwise)
 
 # rsub_scalar
 reg.register_pattern("__rsub_scalar__", OpPattern.ELEMWISE)
-reg.register_schedule("__rsub_scalar__", _fschedule_broadcast)
+reg.register_schedule("__rsub_scalar__", _fschedule_elemwise)
 
 # mul_scalar
 reg.register_pattern("__mul_scalar__", OpPattern.ELEMWISE)
-reg.register_schedule("__mul_scalar__", _fschedule_broadcast)
+reg.register_schedule("__mul_scalar__", _fschedule_elemwise)
 
 # div_scalar
 reg.register_pattern("__div_scalar__", OpPattern.ELEMWISE)
-reg.register_schedule("__div_scalar__", _fschedule_broadcast)
+reg.register_schedule("__div_scalar__", _fschedule_elemwise)
 
 # rdiv_scalar
 reg.register_pattern("__rdiv_scalar__", OpPattern.ELEMWISE)
-reg.register_schedule("__rdiv_scalar__", _fschedule_broadcast)
+reg.register_schedule("__rdiv_scalar__", _fschedule_elemwise)
 
 # pow_scalar
 reg.register_pattern("__pow_scalar__", OpPattern.ELEMWISE)
-reg.register_schedule("__pow_scalar__", _fschedule_broadcast)
+reg.register_schedule("__pow_scalar__", _fschedule_elemwise)
 
 # rpow_scalar
 reg.register_pattern("__rpow_scalar__", OpPattern.ELEMWISE)
-reg.register_schedule("__rpow_scalar__", _fschedule_broadcast)
+reg.register_schedule("__rpow_scalar__", _fschedule_elemwise)
 
 # elemwise_add
 reg.register_pattern("elemwise_add", OpPattern.BROADCAST)
-reg.register_schedule("elemwise_add", _fschedule_broadcast)
+reg.register_schedule("elemwise_add", _fschedule_elemwise)
 
 # elemwise_sub
 reg.register_pattern("elemwise_sub", OpPattern.BROADCAST)
@@ -148,9 +148,19 @@ reg.register_schedule("broadcast_to", _fschedule_broadcast)
 reg.register_pattern("clip", OpPattern.ELEMWISE)
 reg.register_schedule("clip", _fschedule_elemwise)
 
+# matmul
+@reg.register_compute("matmul")
+def compute_matmul(attrs, inputs, out_info):
+    """Compute definition of matmul"""
+    transpose_a = attrs.get_bool("transpose_a")
+    transpose_b = attrs.get_bool("transpose_b")
+    return topi.math.matmul(inputs[0], inputs[1], transpose_a, transpose_b)
+reg.register_pattern("matmul", OpPattern.INJECTIVE)
+reg.register_schedule("matmul", _fschedule_injective)
+
 # elemwise sum
 @reg.register_compute("elemwise_sum")
-def compute_elemwise_sum(attrs, inputs, _):
+def compute_elemwise_sum(attrs, inputs, out_info):
     """Compute definition of elemwise sum"""
     num_args = attrs.get_int("num_args")
     assert num_args == len(inputs), "Number of tensors does not match num_args."
@@ -160,7 +170,7 @@ reg.register_schedule("elemwise_sum", _fschedule_elemwise)
 
 # full
 @reg.register_compute("full")
-def compute_full(attrs, inputs, _):
+def compute_full(attrs, inputs, out_info):
     """Compute definition of full"""
     shape = attrs.get_int_tuple("shape")
     dtype = attrs.get_string("dtype")
@@ -171,7 +181,7 @@ reg.register_schedule("full", _fschedule_elemwise)
 
 # full_like
 @reg.register_compute("full_like")
-def compute_full_like(attrs, inputs, _):
+def compute_elemwise_sum(attrs, inputs, out_info):
     """Compute definition of full_like"""
     fill_value = attrs.get_float("fill_value")
     return topi.tensor.full_like(inputs[0], fill_value)
@@ -180,7 +190,7 @@ reg.register_schedule("full_like", _fschedule_elemwise)
 
 # zeros
 @reg.register_compute("zeros")
-def compute_zeros(attrs, inputs, _):
+def compute_zeros(attrs, inputs, out_info):
     """Compute definition of zeros"""
     shape = attrs.get_int_tuple("shape")
     dtype = attrs.get_string("dtype")
@@ -190,7 +200,7 @@ reg.register_schedule("zeros", _fschedule_elemwise)
 
 # zeros_like
 @reg.register_compute("zeros_like")
-def compute_zeros_like(_, inputs, out_info):
+def compute_zeros_like(attrs, inputs, out_info):
     """Compute definition of zeros_like"""
     return topi.tensor.full_like(inputs[0], 0)
 reg.register_pattern("zeros_like", OpPattern.ELEMWISE)
@@ -198,7 +208,7 @@ reg.register_schedule("zeros_like", _fschedule_elemwise)
 
 # ones
 @reg.register_compute("ones")
-def compute_ones(attrs, inputs, _):
+def compute_ones(attrs, inputs, out_info):
     """Compute definition of ones"""
     shape = attrs.get_int_tuple("shape")
     dtype = attrs.get_string("dtype")
@@ -209,7 +219,7 @@ reg.register_schedule("ones", _fschedule_elemwise)
 
 # ones_like
 @reg.register_compute("ones_like")
-def compute_ones_like(_, inputs, out_info):
+def compute_ones_like(attrs, inputs, out_info):
     """Compute definition of ones_like"""
     return topi.tensor.full_like(inputs[0], 1)
 reg.register_pattern("ones_like", OpPattern.ELEMWISE)
@@ -235,3 +245,8 @@ reg.register_schedule("less", _fschedule_elemwise)
 reg.register_compute("block_grad", _compute_unary(topi.identity))
 reg.register_pattern("block_grad", OpPattern.ELEMWISE)
 reg.register_schedule("block_grad", _fschedule_elemwise)
+
+# assign
+reg.register_compute("assign", lambda attrs, inputs, out_info: topi.identity(inputs[1]))
+reg.register_pattern("assign", OpPattern.ELEMWISE)
+reg.register_schedule("assign", _fschedule_elemwise)
