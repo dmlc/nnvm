@@ -16,6 +16,12 @@ class OnnxOpConverter(object):
 
     @classmethod
     def get_converter(cls, opset):
+        """ Get converter matches given opset.
+
+        :param opset: opset from model.
+        :return: converter, which should be `_impl_vx`. Number x is the biggest
+            number smaller than or equal to opset belongs to all support versions.
+        """
         versions = [
             int(d.replace('_impl_v', '')) for d in dir(cls) if '_impl_v' in d
         ]
@@ -161,6 +167,8 @@ class Elu(OnnxOpConverter):
 
 
 class Gemm(OnnxOpConverter):
+    """ Operator converter for Gemm.
+    """
 
     @classmethod
     def _impl_v1(cls, inputs, attr, params):
