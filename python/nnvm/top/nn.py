@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import tvm
 import topi
 from topi.util import get_const_int
-from .tensor import _fschedule_broadcast
+from .tensor import _fschedule_broadcast, _fschedule_injective
 from . import registry as reg
 from .registry import OpPattern
 
@@ -65,6 +65,9 @@ def schedule_dense(_, outs, target):
 
 reg.register_pattern("dense", OpPattern.OUT_ELEMWISE_FUSABLE)
 
+#matmul
+reg.register_pattern("matmul", OpPattern.INJECTIVE)
+reg.register_schedule("matmul", _fschedule_injective)
 
 # conv2d
 @reg.register_compute("conv2d")
