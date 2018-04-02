@@ -15,6 +15,7 @@ namespace {
 
 // default aggregate gradient function
 // require operator zeros and elemwise_sum to be presented.
+static int count = 0;
 NodeEntry DefaultAggregateGradient(std::vector<NodeEntry>&& v) {
   if (v.size() == 1) {
     return std::move(v[0]);
@@ -28,7 +29,7 @@ NodeEntry DefaultAggregateGradient(std::vector<NodeEntry>&& v) {
     NodePtr sum_node = Node::Create();
     sum_node->attrs.op = Op::Get("elemwise_sum");
     sum_node->inputs = std::move(v);
-    sum_node->attrs.name = "grad_sum";
+    sum_node->attrs.name = "grad_sum" + std::to_string(count++);
     sum_node->attrs.dict["num_args"] = std::to_string(sum_node->inputs.size());
     sum_node->attrs.op->attr_parser(&(sum_node->attrs));
     return NodeEntry{sum_node, 0, 0};

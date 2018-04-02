@@ -17,13 +17,15 @@ namespace compiler {
 
 Graph ExpandCompute(nnvm::Graph src) {
   const IndexedGraph& idx = src.indexed_graph();
-  std::unordered_map<std::string, TShape> name2shape;
+  std::map<std::string, TShape> name2shape;
   const ShapeVector& shape_vec = src.GetAttr<ShapeVector>("shape");
   for (uint32_t i = 0, j = 0; i < idx.num_nodes(); ++i) {
     const Node* src = idx[i].source;
     uint32_t num_outputs = src->num_outputs();
     std::string name = src->attrs.name;
-    CHECK_EQ(name2shape.count(name), 0);
+    CHECK(name2shape.count(name) == 0 || name2shape[name] == shape_vec[j])
+      << "Reassigning shape of " << name << ". prev: "
+      << shape_vec[j] << ", new: " << name2shape[name];
     name2shape[name] = shape_vec[j];
     j += num_outputs;
   }
@@ -33,6 +35,9 @@ Graph ExpandCompute(nnvm::Graph src) {
     if (!fcompute.count(n->op())) return false;
     std::vector<TShape> input_shapes;
     for (const NodeEntry& inp : n->inputs) {
+      CHECK_GT(name2shape.count(inp.node->attrs.name), 0)
+        << "Input " << inp.node->attrs.name << " as input to "
+        << n->attrs.name << " does not exist.";
       input_shapes.push_back(name2shape[inp.node->attrs.name]);
     }
     std::vector<NodeEntry> exp = fcompute[n->op()](n, n->inputs, input_shapes);
@@ -40,18 +45,21 @@ Graph ExpandCompute(nnvm::Graph src) {
     *ret = exp;
     return true;
   };
-  ShapeVector new_shape_vec;
+
+  // preserve input shapes
   Graph egraph = GraphTransform(src, transform);
   const IndexedGraph& eidx = egraph.indexed_graph();
-  for (int i = 0; i < eidx.num_nodes(); ++i) {
-    std::string name = eidx[i].source->attrs.name;
+  ShapeVector ishapes;
+  for (const auto& nid : eidx.input_nodes()) {
+    std::string name = eidx[nid].source->attrs.name;
     if (name2shape.count(name)) {
-      new_shape_vec.push_back(name2shape[name]);
+      ishapes.push_back(name2shape[name]);
     } else {
-      new_shape_vec.emplace_back();
+      ishapes.emplace_back();
     }
   }
-  egraph.attrs["shape"] = std::make_shared<any>(std::move(new_shape_vec));
+  egraph.attrs["shape_inputs"] = std::make_shared<any>(std::move(ishapes));
+
   if (needs_expand)
     return ApplyPasses(egraph, {"InferShape", "ExpandCompute"});
   return egraph;
