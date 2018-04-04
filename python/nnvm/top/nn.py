@@ -10,8 +10,18 @@ from . import registry as reg
 from .registry import OpPattern
 
 # relu
-reg.register_schedule("relu", _fschedule_broadcast)
-reg.register_pattern("relu", OpPattern.ELEMWISE)
+@reg.register_compute("relu")
+def compute_relu(attrs, inputs, _):
+    """Compute definition of relu"""
+    return topi.nn.relu(inputs[0])
+
+@reg.register_schedule("relu")
+def schedule_relu(_, outs, target):
+    """Schedule definition of relu"""
+    with tvm.target.create(target):
+        return topi.generic.schedule_relu(outs)
+
+reg.register_pattern("relu", OpPattern.OUT_ELEMWISE_FUSABLE)
 
 
 # leaky_relu
