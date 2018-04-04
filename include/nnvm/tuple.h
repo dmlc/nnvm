@@ -578,12 +578,13 @@ inline bool Tuple<ValueType>::Load(TStream *strm) {
   return true;
 }
 
-
 }  // namespace nnvm
 
 namespace dmlc {
+/*! \brief description for optional TShape */
 DMLC_DECLARE_TYPE_NAME(optional<nnvm::TShape>, "Shape or None");
-}
+
+} // namespace dmlc
 
 namespace std {
 /*! \brief hash function for Tuple. */
