@@ -74,6 +74,12 @@ def _batch_norm(inputs, attrs):
     new_attrs['scale'] = True
     return _get_nnvm_op(op_name)(*inputs, **new_attrs)
 
+def _clip(inputs, attrs):
+    a_min = float(_required_attr(attrs, 'a_min'))
+    a_max = float(_required_attr(attrs, 'a_max'))
+    sym = a_max-_sym.relu(a_max-_sym.relu(inputs[0]-a_min))
+    return sym
+
 def _concat(inputs, attrs):
     op_name = 'concatenate'
     new_attrs = {'axis': attrs.get('dim', 1)}
@@ -217,6 +223,7 @@ _convert_map = {
     'BatchNorm'     : _batch_norm,
     'BatchNorm_v1'  : _batch_norm,
     'Cast'          : _rename('cast'),
+    'clip'          : _clip,
     'Concat'        : _concat,
     'Convolution'   : _conv2d,
     'Convolution_v1': _conv2d,
