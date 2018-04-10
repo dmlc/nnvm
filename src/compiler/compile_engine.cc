@@ -40,9 +40,10 @@ int GetTypeFlag(tvm::Type type) {
   LOG(FATAL) << "cannot convert " << type;
   return 0;
 }
+
 // convert from type flag to tvm type.
-Type GetTVMType(int type_flag) {
-  switch (type_flag) {
+tvm::Type GetTVMType(int type_flag) {
+  switch(type_flag) {
     case 0:
       return tvm::Float(32);
     case 1:

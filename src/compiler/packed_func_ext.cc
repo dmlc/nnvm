@@ -119,5 +119,16 @@ TVM_REGISTER_GLOBAL("nnvm.graph._move_graph")
       *rv = nullptr;
     }
   });
+
+TVM_REGISTER_GLOBAL("nnvm.graph._move_shape")
+.set_body([](TVMArgs args, TVMRetValue *rv) {
+    const nnvm::Graph& g = args[0].AsExtension<Graph>();
+    std::string key = args[1];
+    if (g.attrs.count(key)) {
+      const_cast<nnvm::Graph*>(&g)->MoveCopyAttr<ShapeVector>(key);
+    } else {
+      *rv = nullptr;
+    }
+  });
 }  // namespace compiler
 }  // namespace nnvm

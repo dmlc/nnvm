@@ -1,7 +1,7 @@
 /*!
  *  Copyright (c) 2017 by Contributors
  * \file elemwise_op_common.h
- * \brief Common operator utilities
+ * \brief Common elemwise operator utilities
  */
 #ifndef NNVM_TOP_ELEMWISE_OP_COMMON_H_
 #define NNVM_TOP_ELEMWISE_OP_COMMON_H_

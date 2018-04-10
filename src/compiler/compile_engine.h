@@ -109,6 +109,17 @@ int GetTypeFlag(tvm::Type type);
  */
 tvm::Type GetTVMType(int type_flag);
 
+/*!
+ * \brief Get type flag from TVM Type
+ *
+ * \param type the tvm type.
+ * \return corresponding DLDataType
+ */
+int GetTypeFlag(tvm::Type type);
+
+// convert from type flag to tvm type.
+tvm::Type GetTVMType(int type_flag);
+
 }  // namespace compiler
 }  // namespace nnvm
 

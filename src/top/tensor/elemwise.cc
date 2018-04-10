@@ -31,6 +31,9 @@ Used to produce invalide node during optimization.
 .set_num_outputs(1)
 .set_num_inputs(0);
 
+// identity
+NNVM_REGISTER_ELEMWISE_UNARY_OP(identity);
+
 // sigmoid
 NNVM_REGISTER_ELEMWISE_UNARY_OP(sigmoid)
 .describe(R"code(Computes sigmoid.
@@ -170,6 +173,19 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(sqrt)
              {ograds[0], sub0})
     };
 });
+
+DMLC_REGISTER_PARAMETER(ShiftParam);
+
+NNVM_REGISTER_ELEMWISE_UNARY_OP(left_shift)
+.add_arguments(ShiftParam::__FIELDS__())
+.set_attr_parser(ParamParser<ShiftParam>)
+.set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<ShiftParam>);
+
+NNVM_REGISTER_ELEMWISE_UNARY_OP(right_shift)
+.add_arguments(ShiftParam::__FIELDS__())
+.set_attr_parser(ParamParser<ShiftParam>)
+.set_attr<FGetAttrDict>("FGetAttrDict", ParamGetAttrDict<ShiftParam>);
+
 
 // binary ops
 

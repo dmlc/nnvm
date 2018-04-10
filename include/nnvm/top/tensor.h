@@ -86,8 +86,22 @@ enum IndicatorRuleFlag {
 struct CastParam : public dmlc::Parameter<CastParam> {
   int dtype;
   DMLC_DECLARE_PARAMETER(CastParam) {
-    DMLC_DECLARE_DTYPE_FIELD(dtype)
+    DMLC_DECLARE_FIELD(dtype)
+    .add_enum("float32", kFloat32)
+    .add_enum("float64", kFloat64)
+    .add_enum("float16", kFloat16)
+    .add_enum("uint8", kUint8)
+    .add_enum("int32", kInt32)
+    .add_enum("int8", kInt8)
+    .add_enum("int16", kInt16)
     .describe("Output data type.");
+  }
+};
+
+struct ShiftParam : public dmlc::Parameter<ShiftParam> {
+  int bit;
+  DMLC_DECLARE_PARAMETER(ShiftParam) {
+    DMLC_DECLARE_FIELD(bit);
   }
 };
 

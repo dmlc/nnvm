@@ -105,3 +105,4 @@ def set_layout_inputs(g, layout):
 
 _move_out_module = tvm.get_global_func("nnvm.graph._move_module")
 _move_out_graph = tvm.get_global_func("nnvm.graph._move_graph")
+_move_out_shape = tvm.get_global_func("nnvm.graph._move_shape")
