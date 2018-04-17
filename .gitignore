@@ -57,3 +57,7 @@ cat.jpg
 
 # Jetbrain
 .idea
+
+# Distribution / packaging
+*.egg-info/
+dist/
