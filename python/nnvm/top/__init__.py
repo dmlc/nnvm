@@ -5,6 +5,7 @@ Provide information to lower and schedule tensor operators.
 from .attr_dict import AttrDict
 from . import tensor
 from . import nn
+from . import quantized_ops
 from . import transform
 from . import reduction
 from . import vision

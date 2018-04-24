@@ -4,7 +4,6 @@ from __future__ import absolute_import
 
 import tvm
 import topi
-import topi.cuda
 from . import registry as reg
 from .registry import OpPattern
 
@@ -37,10 +36,41 @@ def _compute_binary(f):
         return f(x[0], x[1])
     return _compute
 
-
 _fschedule_injective = tvm.convert(_schedule_injective)
 _fschedule_broadcast = _fschedule_injective
 _fschedule_elemwise = _fschedule_injective
+
+# lshift
+@reg.register_compute("left_shift")
+def compute_lshift(attrs, inputs, _):
+    data = inputs[0]
+    bit = attrs.get_int("bit")
+    return topi.left_shift(data, bit)
+reg.register_pattern("left_shift", OpPattern.ELEMWISE)
+reg.register_schedule("left_shift", _fschedule_broadcast)
+
+# rshift
+@reg.register_compute("right_shift")
+def compute_rshift(attrs, inputs, _):
+    data = inputs[0]
+    bit = attrs.get_int("bit")
+    return topi.right_shift(data, bit)
+reg.register_pattern("right_shift", OpPattern.ELEMWISE)
+reg.register_schedule("right_shift", _fschedule_broadcast)
+
+
+# identity
+reg.register_compute("identity", _compute_unary(topi.identity))
+reg.register_pattern("identity", OpPattern.ELEMWISE)
+reg.register_schedule("identity", _fschedule_broadcast)
+
+# cast
+@reg.register_compute("cast")
+def compute_cast(attrs, inputs, _):
+    return topi.cast(inputs[0], attrs['dtype'])
+reg.register_pattern("cast", OpPattern.ELEMWISE)
+reg.register_schedule("cast", _fschedule_broadcast)
+
 
 # Assign requires special treatment in the compiler
 # The compute and schedule are designed as

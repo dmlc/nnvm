@@ -41,7 +41,7 @@ inline void ParamParser(nnvm::NodeAttrs* attrs) {
 
 /*!
  * \brief Parse keyword arguments as PType arguments and save to parsed
- * \tparam PType the arameter type.
+ * \tparam PType the parameter type.
  * \param attrs The attributes.
  */
 template<typename PType>
