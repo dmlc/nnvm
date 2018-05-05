@@ -246,6 +246,8 @@ class Reciprocal(OnnxOpConverter):
 
 
 class Reshape(OnnxOpConverter):
+    """ Operator converter for Reshape.
+    """
 
     @classmethod
     def _impl_v1(cls, inputs, attr, params):
