@@ -18,6 +18,8 @@
 namespace nnvm {
 namespace top {
 
+#define MAX(a, b) (((a) > (b))?(a):(b))
+
 template<typename ParamType>
 inline uint32_t UseBiasNumInputs(const NodeAttrs& attrs) {
   const ParamType& param = get<ParamType>(attrs.parsed);
@@ -84,6 +86,52 @@ inline TShape ConvertLayout(TShape src, const Layout& src_layout, const Layout& 
     }
   }
   return dst;
+}
+
+/*!
+ * \brief Derive padding based on the padding scheme
+ * \param padding : Original padding scheme
+ * \param kernel : kernel shape
+ * \param strides : Stride shape
+ * \param inshape : Input Tensor shape
+ * \param padding_scheme : padding_scheme tp be used.
+ * \param layout : Data layout.
+ * \return padding based on the padding_scheme or copy original padding.
+ */
+inline TShape ConvertPaddingScheme(TShape padding, TShape kernel,
+                                   TShape strides, TShape inshape,
+                                   int padding_scheme, std::string layout) {
+  TShape conv_padding = padding;
+
+  if (padding_scheme) {
+    int in_height, in_width, pad_h, pad_w;
+
+    if (layout == "NCHW") {
+      in_height = inshape[2];
+      in_width = inshape[3];
+    } else {
+      in_height = inshape[1];
+      in_width = inshape[2];
+    }
+
+    if (in_height % strides[0] == 0)
+      pad_h = MAX(kernel[0] - strides[0], 0);
+    else
+      pad_h = MAX(kernel[0] - (in_height % strides[0]), 0);
+
+    if (in_width % strides[1] == 0)
+      pad_w = MAX(kernel[1] - strides[1], 0);
+    else
+      pad_w = MAX(kernel[1] - (in_width % strides[1]), 0);
+
+    pad_h = pad_h / 2;
+    pad_w = pad_w / 2;
+
+    conv_padding[0] = pad_h;
+    conv_padding[1] = pad_w;
+  }
+
+  return conv_padding;
 }
 
 }  // namespace top

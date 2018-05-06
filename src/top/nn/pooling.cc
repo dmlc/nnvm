@@ -30,6 +30,9 @@ inline bool Pool2DInferShape(const nnvm::NodeAttrs& attrs,
 
   TShape dshape = (*in_shape)[0];
   if (dshape.ndim() ==  0) return false;
+  TShape conv_padding = ConvertPaddingScheme(param.padding, param.pool_size,
+                        param.strides, (TShape) in_shape->at(0),
+                        param.padding_scheme, param.layout);
 
   CHECK_GE(dshape.ndim(), 2U)
     << "Pool2D only support input >= 2-D: input must have height and width";
@@ -44,22 +47,22 @@ inline bool Pool2DInferShape(const nnvm::NodeAttrs& attrs,
   const auto widx = layout.indexof('W');
 
   TShape oshape = dshape;
-  CHECK(param.pool_size[0] <= dshape[hidx] + 2 * param.padding[0])
+  CHECK(param.pool_size[0] <= dshape[hidx] + 2 * conv_padding[0])
       << "pool size (" << param.pool_size[0] << ") exceeds input (" << dshape[hidx]
-      << " padded to " << (dshape[hidx] + 2*param.padding[0]) << ")";
-  CHECK(param.pool_size[1] <= dshape[widx] + 2 * param.padding[1])
+      << " padded to " << (dshape[hidx] + 2*conv_padding[0]) << ")";
+  CHECK(param.pool_size[1] <= dshape[widx] + 2 * conv_padding[1])
       << "pool size (" << param.pool_size[1] << ") exceeds input (" << dshape[widx]
-      << " padded to " << (dshape[widx] + 2*param.padding[1]) << ")";
+      << " padded to " << (dshape[widx] + 2*conv_padding[1]) << ")";
 
   if (!param.ceil_mode) {
-    oshape[hidx] = ((dshape[hidx] + 2 * param.padding[0] - param.pool_size[0]) /
+    oshape[hidx] = ((dshape[hidx] + 2 * conv_padding[0] - param.pool_size[0]) /
                     param.strides[0]) + 1;
-    oshape[widx] = ((dshape[widx] + 2 * param.padding[1] - param.pool_size[1]) /
+    oshape[widx] = ((dshape[widx] + 2 * conv_padding[1] - param.pool_size[1]) /
                     param.strides[1]) + 1;
   } else {
-    oshape[hidx] = ((dshape[hidx] + 2 * param.padding[0] - param.pool_size[0] +
+    oshape[hidx] = ((dshape[hidx] + 2 * conv_padding[0] - param.pool_size[0] +
                     param.strides[0] - 1) / param.strides[0]) + 1;
-    oshape[widx] = ((dshape[3] + 2 * param.padding[1] - param.pool_size[1] +
+    oshape[widx] = ((dshape[3] + 2 * conv_padding[1] - param.pool_size[1] +
                     param.strides[1] - 1) / param.strides[1]) + 1;
   }
   NNVM_ASSIGN_OUTPUT_SHAPE(attrs, *out_shape, 0, oshape);
@@ -141,8 +144,12 @@ NNVM_REGISTER_OP(max_pool2d)
     << "Pool2D only support 4-D input (e.g., NCHW)"
     << " or 5-D input (last dimension is a split of channel)";
 
+  TShape conv_padding = ConvertPaddingScheme(param.padding, param.pool_size,
+                        param.strides, TensorToShape(inputs[0]),
+                        param.padding_scheme, param.layout);
+
   return Array<Tensor>{
-    topi::nn::pool(inputs[0], pool_size, strides, padding,
+    topi::nn::pool(inputs[0], pool_size, strides, ShapeToArray(conv_padding),
                    topi::nn::kMaxPool, ceil_mode, layout.name())};
 })
 .set_attr<FGradient>(
@@ -212,8 +219,12 @@ NNVM_REGISTER_OP(avg_pool2d)
     << "Pool2D only support 4-D input (e.g., NCHW)"
     << " or 5-D input (last dimension is a split of channel)";
 
+  TShape conv_padding = ConvertPaddingScheme(param.padding, param.pool_size,
+                        param.strides, TensorToShape(inputs[0]),
+                        param.padding_scheme, param.layout);
+
   return Array<Tensor>{
-    topi::nn::pool(inputs[0], pool_size, strides, padding,
+    topi::nn::pool(inputs[0], pool_size, strides, ShapeToArray(conv_padding),
                    topi::nn::kAvgPool, ceil_mode, layout.name())};
 })
 .set_num_outputs(1)

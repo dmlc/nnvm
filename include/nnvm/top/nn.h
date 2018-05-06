@@ -123,6 +123,7 @@ struct Conv2DParam : public dmlc::Parameter<Conv2DParam> {
   std::string kernel_layout;
   std::string out_layout;
   bool use_bias;
+  int padding_scheme;
 
   DMLC_DECLARE_PARAMETER(Conv2DParam) {
     DMLC_DECLARE_FIELD(channels)
@@ -158,6 +159,9 @@ struct Conv2DParam : public dmlc::Parameter<Conv2DParam> {
                 "dimensions respectively.");
     DMLC_DECLARE_FIELD(use_bias).set_default(true)
       .describe("Whether the layer uses a bias vector.");
+    DMLC_DECLARE_FIELD(padding_scheme).set_default(0)
+      .describe("Set to 1 to compute padding automatically,"
+                " This case the padding attr will be ignored");
   }
   // constants
   static const constexpr int kData = 0;
@@ -224,6 +228,7 @@ struct Pool2DParam : public dmlc::Parameter<Pool2DParam> {
   TShape padding;
   std::string layout;
   bool ceil_mode;
+  int padding_scheme;
 
   DMLC_DECLARE_PARAMETER(Pool2DParam) {
     DMLC_DECLARE_FIELD(pool_size)
@@ -240,6 +245,9 @@ struct Pool2DParam : public dmlc::Parameter<Pool2DParam> {
                 "'W' dimensions.");
     DMLC_DECLARE_FIELD(ceil_mode).set_default(false)
       .describe("When true, will use ceil instead of floor to compute the output shape.");
+    DMLC_DECLARE_FIELD(padding_scheme).set_default(0)
+      .describe("Set to 1 to compute padding automatically,"
+                " This case the padding attr will be ignored");
   }
 };
 
