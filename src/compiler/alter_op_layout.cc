@@ -67,7 +67,7 @@ Graph AlterOpLayout(const Graph& src) {
       in_layouts_of_node[nid] = in_layout;
 
       std::vector<Layout> out_layout;
-      for (uint i = 0; i < inode.source->num_outputs(); ++i) {
+      for (uint32_t i = 0; i < inode.source->num_outputs(); ++i) {
         out_layout.emplace_back(layouts[idx_graph.entry_id(nid, i)]);
       }
       out_layouts_of_node[nid] = out_layout;
@@ -103,9 +103,11 @@ Graph AlterOpLayout(const Graph& src) {
       tensor_infos.push_back(op_output_tinfos[input.index]);
     }
     // callback registered function to get a new operator.
-    auto op = fn_alter_op_layout(n->attrs, Symbol::CreateGroup(op_inputs), tensor_infos);
-    *ret = op.outputs;
-    return true;
+    Symbol op;
+    bool do_alter =
+      fn_alter_op_layout(n->attrs, Symbol::CreateGroup(op_inputs), tensor_infos, &op);
+    if (do_alter) *ret = op.outputs;
+    return do_alter;
   };
 
   Graph ret = nnvm::compiler::GraphTransform(src, transform);
