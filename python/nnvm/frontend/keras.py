@@ -2,6 +2,7 @@
 """Keras frontend."""
 from __future__ import absolute_import as _abs
 import sys
+import logging
 import numpy as np
 import tvm
 from .. import symbol as _sym
@@ -345,11 +346,10 @@ def _convert_concat(insym, keras_layer, _):
 
 
 def _convert_reshape(insym, keras_layer, _):
-    shape = keras_layer.shape if hasattr(keras_layer, 'shape') \
-       else keras_layer.target_shape if hasattr(keras_layer, 'target_shape') \
-       else None
-    if shape is None:
-        raise TypeError("No shape attribute in reshape layer: {}".format(keras_layer))
+    # XXX: This works only when the target shape is in `channels_last` layout.
+    logging.warning('Assumes that the target shape is in `channels_last` layout.')
+    ch = keras_layer.target_shape[-1]
+    shape = (-1, ch) + keras_layer.target_shape[:-1]
     return _sym.reshape(insym, shape=shape)
 
 
