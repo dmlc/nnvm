@@ -423,7 +423,7 @@ def _get_convert_map(opset):
         'ParametricSoftplus': ParametricSoftPlus.get_converter(opset),
         # 'ConstantFill'
         # 'GivenTensorFill'
-        'FC':  _fully_connected(opset), 
+        'FC': _fully_connected(opset), 
         'Scale': Scale.get_converter(opset),
         # 'GRUUnit'
         # 'ATen'
