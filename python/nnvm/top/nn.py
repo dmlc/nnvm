@@ -88,6 +88,8 @@ def compute_conv2d(attrs, inputs, _):
     (dilation_h, dilation_w) = dilation
     if dilation_h < 1 or dilation_w < 1:
         raise ValueError("dilation should be positive value")
+    elif dilation == (1, 1):
+        kernel = inputs[1]
     elif layout == "NCHW":
         kernel = topi.nn.dilate(inputs[1], [1, 1, dilation_h, dilation_w])
     else: #layout == NHWC
@@ -117,6 +119,10 @@ def schedule_conv2d(attrs, outs, target):
         elif groups == 1 and layout == "NHWC":
             return topi.generic.schedule_conv2d_nhwc(outs)
         return topi.generic.schedule_depthwise_conv2d_nchw(outs)
+
+@reg.register_alter_op_layout("conv2d")
+def alter_conv2d_layout(attrs, inputs, tinfos):
+    return topi.nn.conv2d_alter_layout(attrs, inputs, tinfos)
 
 reg.register_pattern("conv2d", OpPattern.OUT_ELEMWISE_FUSABLE)
 
