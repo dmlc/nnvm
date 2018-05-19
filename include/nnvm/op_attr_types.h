@@ -202,6 +202,8 @@ using FCorrectLayout = std::function<bool(
     const std::vector<Layout> *last_ilayouts,
     std::vector<Layout> *olayouts)>;
 
+using FInputGraph = std::function<std::vector<uint32_t>(const NodeAttrs& attrs)>;
+
 }  // namespace nnvm
 
 #endif  // NNVM_OP_ATTR_TYPES_H_

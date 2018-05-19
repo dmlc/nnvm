@@ -267,6 +267,24 @@ void Symbol::Compose(const array_view<const Symbol*>& args,
                      const std::string& name) {
   static auto& flist_inputs = Op::GetAttr<FListInputNames>("FListInputNames");
   static auto& fset_attrs = Op::GetAttr<FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose");
+  static auto& fgraph = Op::GetAttr<FInputGraph>("FInputGraph");
+
+  // The arguments that contain graphs.
+  Node* n = outputs[0].node.get();
+  FInputGraph fng = fgraph.get(n->op(), nullptr);
+  std::vector<uint32_t> garg_idx;
+  if (fng != nullptr)
+    garg_idx = fng(n->attrs);
+
+  // The names of the arguments that contain graphs.
+  FListInputNames name_fn = flist_inputs.get(n->op(), nullptr);
+  auto arg_names = (name_fn == nullptr) ? std::vector<std::string>{"data"} : name_fn(n->attrs);
+  std::vector<std::string> garg_names(garg_idx.size());
+  for (size_t i = 0; i < garg_idx.size(); i++) {
+    size_t idx = garg_idx[i];
+    if (idx < arg_names.size())
+      garg_names[i] = arg_names[idx];
+  }
 
   // parameter check.
   for (size_t i = 0; i < args.size(); ++i) {
