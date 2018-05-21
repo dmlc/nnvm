@@ -827,5 +827,155 @@ Examples::
     };
 });
 
+// strided_slice
+DMLC_REGISTER_PARAMETER(StridedSliceParam);
+
+inline void StridedSliceParamParser(nnvm::NodeAttrs* attrs) {
+  StridedSliceParam param;
+  param.Init(attrs->dict);
+  attrs->parsed = std::move(param);
+}
+
+inline bool StridedSliceInferShape(const NodeAttrs& attrs,
+                            std::vector<TShape>* in_shape,
+                            std::vector<TShape>* out_shape) {
+  const StridedSliceParam& param = nnvm::get<StridedSliceParam>(attrs.parsed);
+  const TShape& dshape = (*in_shape)[0];
+  if (dshape.ndim() == 0) return false;
+  TShape oshape = dshape;
+  dim_t num_axis = param.begin.ndim();
+  CHECK_EQ(dshape.ndim(), static_cast<size_t>(num_axis));
+  int begin;
+  int end;
+  int stride;
+  for (dim_t i = 0; i < num_axis; ++i) {
+      if (param.stride[i] > 0) {
+          begin = param.begin[i];
+          end = param.end[i];
+          stride = param.stride[i];
+      } else {
+          int begin_range = -1;
+          int end_range = dshape[i] - 1;
+          begin = param.begin[i] < 0 ? dshape[i] + param.begin[i] : param.begin[i];
+          end = param.end[i] < 0 ? dshape[i] + param.end[i] : param.end[i];
+          begin = begin < begin_range ? begin_range : begin > end_range ? end_range : begin;
+          end = end < begin_range ? begin_range : end > end_range ? end_range : end;
+          stride = -param.stride[i];
+          begin = dshape[i] - begin - 1;
+          end = std::max((int)dshape[i] - end - 1, begin);
+      }
+      oshape[i] = (std::max(end, (int)dshape[i]) - begin) / stride;
+  }
+  NNVM_ASSIGN_OUTPUT_SHAPE(attrs, *out_shape, 0, oshape);
+  return true;
+}
+
+// Intentionally not add ParamGetAttrDict for indices_or_sections.
+NNVM_REGISTER_OP(strided_slice)
+.describe(R"code(Strided slice of an array.
+)code" NNVM_ADD_FILELINE)
+.add_argument("data", "Tensor", "Array to be splitted")
+.add_arguments(StridedSliceParam::__FIELDS__())
+.set_attr_parser(StridedSliceParamParser)
+.set_attr<FInferShape>("FInferShape", StridedSliceInferShape)
+.set_attr<FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<FTVMCompute>(
+  "FTVMCompute", [](const NodeAttrs& attrs,
+                    const Array<Tensor>& inputs,
+                    const Array<Tensor>& out_info) {
+    const StridedSliceParam& param = nnvm::get<StridedSliceParam>(attrs.parsed);
+    Array<Expr> begin;
+    Array<Expr> end;
+    Array<Expr> stride;
+
+    for (auto i : param.begin) {
+        begin.push_back(tvm::make_const(tvm::Int(32), i));
+    }
+
+    for (auto i : param.end) {
+        end.push_back(tvm::make_const(tvm::Int(32), i));
+    }
+
+    for (auto i : param.stride) {
+        stride.push_back(tvm::make_const(tvm::Int(32), i));
+    }
+
+    return Array<Tensor>{topi::strided_slice(inputs[0], begin, end, stride)};
+})
+.set_support_level(1);
+
+// take
+DMLC_REGISTER_PARAMETER(TakeParam);
+
+inline bool TakeInferShape(const NodeAttrs& attrs,
+                            std::vector<TShape>* in_shape,
+                            std::vector<TShape>* out_shape) {
+  const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
+  const TShape& dshape = (*in_shape)[0];
+  const TShape& indicesshape = (*in_shape)[1];
+  if (dshape.ndim() == 0) return false;
+  if (indicesshape.ndim() == 0) return false;
+  int axis = param.axis;
+  if (axis < 0) {
+    axis+= dshape.ndim();
+  }
+  CHECK_LT(axis, dshape.ndim());
+
+  NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 0, dshape);
+  NNVM_ASSIGN_INPUT_SHAPE(attrs, *in_shape, 1, indicesshape);
+
+  TShape oshape(dshape.ndim() + indicesshape.ndim() - 1);
+  size_t posi = 0;
+  for (size_t i = 0; i < dshape.ndim(); ++i) {
+    if (((int)i) == axis) {
+      for (size_t indecis = 0; indecis < indicesshape.ndim(); ++indecis) {
+        oshape[posi++] = indicesshape[indecis];
+      }
+    } else {
+      oshape[posi++] = dshape[i];
+    }
+  }
+  NNVM_ASSIGN_OUTPUT_SHAPE(attrs, *out_shape, 0, oshape);
+  return dshape.Size() != 0;
+}
+
+inline bool TakeInferType(const NodeAttrs& attrs,
+                          std::vector<int>* in_attrs,
+                          std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  CHECK_EQ((*in_attrs)[1], kInt32);
+  NNVM_ASSIGN_INPUT_TYPE(attrs, *in_attrs, 0, (*in_attrs)[0]);
+  NNVM_ASSIGN_INPUT_TYPE(attrs, *in_attrs, 1, static_cast<int>(kInt32));
+  NNVM_ASSIGN_OUTPUT_TYPE(attrs, *out_attrs, 0, (*in_attrs)[0]);
+  return true;
+}
+
+NNVM_REGISTER_OP(take)
+.describe(R"code(Take elements from an array along an axis.
+  
+  This function does the same thing as 'fancy' indexing (indexing arrays using arrays);
+  however, it can be easier to use if you need elements along a given axis.
+  
+  )code" NNVM_ADD_FILELINE)
+.add_argument("data", "Tensor", "Array to be indexed")
+.add_arguments(TakeParam::__FIELDS__())
+.set_attr_parser(ParamParser<TakeParam>)
+.set_attr<FInferShape>("FInferShape", TakeInferShape)
+.set_attr<FInferType>("FInferType", TakeInferType)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_support_level(1)
+.set_attr<FTVMCompute>(
+    "FTVMCompute", [](const NodeAttrs& attrs,
+                      const Array<Tensor>& inputs,
+                      const Array<Tensor>& out_info) {
+      const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
+      return Array<Tensor>{
+          topi::take(inputs[0], inputs[1], param.axis)};
+  });
+
 }  // namespace top
 }  // namespace nnvm

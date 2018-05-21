@@ -48,6 +48,32 @@ struct SplitParam : public dmlc::Parameter<SplitParam> {
   }
 };
 
+struct StridedSliceParam : public dmlc::Parameter<StridedSliceParam> {
+  // numpy convention, only support indices, not support list.
+  Tuple<int> begin;
+  Tuple<int> end;
+  Tuple<int> stride;
+
+  DMLC_DECLARE_PARAMETER(StridedSliceParam) {
+    DMLC_DECLARE_FIELD(begin)
+        .describe("Indices for begin of slice");
+    DMLC_DECLARE_FIELD(end)
+        .describe("Indices for end of the slice");
+    DMLC_DECLARE_FIELD(stride)
+        .describe("Stride values of the slice");
+
+  }
+};
+
+struct TakeParam : public dmlc::Parameter<TakeParam> {
+  int axis;
+
+  DMLC_DECLARE_PARAMETER(TakeParam) {
+    DMLC_DECLARE_FIELD(axis).set_lower_bound(0).set_default(0)
+        .describe("the axis over which to select values.");
+  }
+};
+
 enum TypeFlag {
   kFloat32 = 0,
   kFloat64 = 1,
