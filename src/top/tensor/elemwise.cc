@@ -7,7 +7,9 @@
 #include <nnvm/node.h>
 #include <nnvm/op_attr_types.h>
 #include <nnvm/compiler/op_attr_types.h>
+#include <nnvm/compiler/schedule_factory.h>
 #include <nnvm/top/tensor.h>
+#include <nnvm/top/util.h>
 #include <cmath>
 #include "../op_common.h"
 #include "../elemwise_op_common.h"
@@ -46,6 +48,8 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(sigmoid)
                     const Array<Tensor>& out_info) {
       return Array<Tensor>{ topi::sigmoid(inputs[0]) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kElemWise)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds) {
@@ -76,6 +80,8 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(tanh)
                     const Array<Tensor>& out_info) {
       return Array<Tensor>{ topi::tanh(inputs[0]) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kElemWise)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds) {
@@ -106,6 +112,8 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(exp)
                     const Array<Tensor>& out_info) {
       return Array<Tensor>{ topi::exp(inputs[0]) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kElemWise)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds) {
@@ -132,6 +140,8 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(log)
                     const Array<Tensor>& out_info) {
       return Array<Tensor>{ topi::log(inputs[0]) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kElemWise)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds) {
@@ -158,6 +168,8 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(sqrt)
                     const Array<Tensor>& out_info) {
       return Array<Tensor>{ topi::sqrt(inputs[0]) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kElemWise)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds) {
@@ -184,6 +196,8 @@ NNVM_REGISTER_ELEMWISE_BINARY_OP(elemwise_add)
                     const Array<Tensor>& out_info) {
       return Array<Tensor>{ topi::broadcast_add(inputs[0], inputs[1]) };
   })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kBroadcast)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
@@ -207,6 +221,8 @@ NNVM_REGISTER_ELEMWISE_BINARY_OP(elemwise_sub)
                     const Array<Tensor>& out_info) {
       return Array<Tensor>{ topi::broadcast_sub(inputs[0], inputs[1]) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kBroadcast)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
@@ -230,6 +246,8 @@ NNVM_REGISTER_ELEMWISE_BINARY_OP(elemwise_mul)
                     const Array<Tensor>& out_info) {
       return Array<Tensor>{ topi::broadcast_mul(inputs[0], inputs[1]) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kBroadcast)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
@@ -255,6 +273,8 @@ NNVM_REGISTER_ELEMWISE_BINARY_OP(elemwise_div)
                     const Array<Tensor>& out_info) {
       return Array<Tensor>{ topi::broadcast_div(inputs[0], inputs[1]) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kBroadcast)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
@@ -287,6 +307,8 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(negative)
                     const Array<Tensor>& out_info) {
       return Array<Tensor>{ topi::negative(inputs[0]) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kElemWise)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
@@ -309,6 +331,8 @@ NNVM_REGISTER_ELEMWISE_UNARY_OP(copy)
                     const Array<Tensor>& out_info) {
       return Array<Tensor>{ topi::identity(inputs[0]) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kElemWise)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
@@ -419,6 +443,8 @@ NNVM_REGISTER_ELEMWISE_BINARY_SCALAR(__add_scalar__)
     return Array<Tensor>{ binary_scalar_op(attrs, inputs[0],
       [](Expr x, Expr y) { return x + y; }) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kElemWise)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
@@ -438,6 +464,8 @@ NNVM_REGISTER_ELEMWISE_BINARY_SCALAR(__sub_scalar__)
     return Array<Tensor>{ binary_scalar_op(attrs, inputs[0],
       [](Expr x, Expr y) { return x - y; }) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kElemWise)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
@@ -456,6 +484,8 @@ NNVM_REGISTER_ELEMWISE_BINARY_SCALAR(__rsub_scalar__)
     return Array<Tensor>{ binary_scalar_op(attrs, inputs[0],
       [](Expr x, Expr y) { return y - x; }) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kElemWise)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
@@ -476,6 +506,8 @@ NNVM_REGISTER_ELEMWISE_BINARY_SCALAR(__mul_scalar__)
     return Array<Tensor>{ binary_scalar_op(attrs, inputs[0],
       [](Expr x, Expr y) { return x * y; }) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kElemWise)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
@@ -499,6 +531,8 @@ NNVM_REGISTER_ELEMWISE_BINARY_SCALAR(__div_scalar__)
     return Array<Tensor>{ binary_scalar_op(attrs, inputs[0],
       [](Expr x, Expr y) { return x / y; }) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kElemWise)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
@@ -522,6 +556,8 @@ NNVM_REGISTER_ELEMWISE_BINARY_SCALAR(__rdiv_scalar__)
     return Array<Tensor>{ binary_scalar_op(attrs, inputs[0],
       [](Expr x, Expr y) { return y / x; }) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kElemWise)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
@@ -552,6 +588,8 @@ NNVM_REGISTER_ELEMWISE_BINARY_SCALAR(__pow_scalar__)
     return Array<Tensor>{ binary_scalar_op(attrs, inputs[0],
       [](Expr x, Expr y) { return tvm::pow(x, y); }) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kElemWise)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
@@ -582,6 +620,8 @@ NNVM_REGISTER_ELEMWISE_BINARY_SCALAR(__rpow_scalar__)
     return Array<Tensor>{ binary_scalar_op(attrs, inputs[0],
       [](Expr x, Expr y) { return tvm::pow(y, x); }) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kElemWise)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){

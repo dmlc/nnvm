@@ -9,6 +9,7 @@
 #include <nnvm/op_attr_types.h>
 #include <nnvm/compiler/op_attr_types.h>
 #include <nnvm/top/tensor.h>
+#include <nnvm/top/util.h>
 #include <topi/elemwise.h>
 #include "../op_common.h"
 #include "../elemwise_op_common.h"
@@ -66,7 +67,9 @@ This is an experimental operator.
                {n->inputs[0]}),
       ograds[0]
     };
-});
+})
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 }  // namespace top
 }  // namespace nnvm

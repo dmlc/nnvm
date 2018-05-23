@@ -5,73 +5,8 @@ from __future__ import absolute_import
 import tvm
 import topi
 from topi.util import get_const_int
-from .tensor import _fschedule_broadcast, _fschedule_injective
 from . import registry as reg
 from .registry import OpPattern
-
-# relu
-reg.register_schedule("relu", _fschedule_broadcast)
-reg.register_pattern("relu", OpPattern.ELEMWISE)
-
-
-# leaky_relu
-reg.register_schedule("leaky_relu", _fschedule_broadcast)
-reg.register_pattern("leaky_relu", OpPattern.ELEMWISE)
-
-# prelu
-reg.register_schedule("prelu", _fschedule_broadcast)
-reg.register_pattern("prelu", OpPattern.BROADCAST)
-
-# flatten
-reg.register_schedule("flatten", _fschedule_broadcast)
-reg.register_pattern("flatten", OpPattern.INJECTIVE)
-
-
-# pad
-reg.register_schedule("pad", _fschedule_broadcast)
-reg.register_pattern("pad", OpPattern.INJECTIVE)
-
-
-# layout transform
-reg.register_schedule("__layout_transform__", _fschedule_injective)
-reg.register_pattern("__layout_transform__", OpPattern.INJECTIVE)
-
-
-@reg.register_schedule("softmax")
-def schedule_softmax(_, outs, target):
-    """Schedule definition of softmax"""
-    with tvm.target.create(target):
-        return topi.generic.schedule_softmax(outs)
-
-reg.register_pattern("softmax", OpPattern.OPAQUE)
-
-
-# log softmax
-@reg.register_schedule("log_softmax")
-def schedule_log_softmax(_, outs, target):
-    """Schedule definition of softmax"""
-    with tvm.target.create(target):
-        return topi.generic.schedule_softmax(outs)
-
-# Mark softmax as extern as we do not fuse it in call cases
-reg.register_pattern("log_softmax", OpPattern.OPAQUE)
-
-
-# dense
-@reg.register_compute("dense")
-def compute_dense(attrs, inputs, _):
-    """Compute definition of dense"""
-    if attrs.get_bool("use_bias"):
-        return topi.nn.dense(inputs[0], inputs[1], bias=inputs[2])
-    return topi.nn.dense(inputs[0], inputs[1])
-
-@reg.register_schedule("dense")
-def schedule_dense(_, outs, target):
-    """Schedule definition of dense"""
-    with tvm.target.create(target):
-        return topi.generic.schedule_dense(outs)
-
-reg.register_pattern("dense", OpPattern.OUT_ELEMWISE_FUSABLE)
 
 
 # conv2d
@@ -192,46 +127,6 @@ def schedule_conv2d_transpose(attrs, outs, target):
         return topi.generic.schedule_conv2d_transpose_nchw(outs)
 
 reg.register_pattern("conv2d_transpose", OpPattern.OUT_ELEMWISE_FUSABLE)
-
-
-# max_pool2d
-@reg.register_schedule("max_pool2d")
-def schedule_max_pool2d(_, outs, target):
-    """Schedule definition of max_pool2d"""
-    with tvm.target.create(target):
-        return topi.generic.schedule_pool(outs)
-
-reg.register_pattern("max_pool2d", OpPattern.OUT_ELEMWISE_FUSABLE)
-
-
-# avg_pool2d
-@reg.register_schedule("avg_pool2d")
-def schedule_avg_pool2d(_, outs, target):
-    """Schedule definition of avg_pool2d"""
-    with tvm.target.create(target):
-        return topi.generic.schedule_pool(outs)
-
-reg.register_pattern("avg_pool2d", OpPattern.OUT_ELEMWISE_FUSABLE)
-
-
-# global_max_pool2d
-@reg.register_schedule("global_max_pool2d")
-def schedule_global_max_pool2d(_, outs, target):
-    """Schedule definition of global_max_pool2d"""
-    with tvm.target.create(target):
-        return topi.generic.schedule_global_pool(outs)
-
-reg.register_pattern("global_max_pool2d", OpPattern.OUT_ELEMWISE_FUSABLE)
-
-
-# global_avg_pool2d
-@reg.register_schedule("global_avg_pool2d")
-def schedule_global_avg_pool2d(_, outs, target):
-    """Schedule definition of global_avg_pool2d"""
-    with tvm.target.create(target):
-        return topi.generic.schedule_global_pool(outs)
-
-reg.register_pattern("global_avg_pool2d", OpPattern.OUT_ELEMWISE_FUSABLE)
 
 
 @reg.register_compute("upsampling")

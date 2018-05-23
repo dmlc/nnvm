@@ -32,7 +32,7 @@ typedef std::function<Graph (Graph src)> PassFunction;
  * \param passes A list of pass names to be applied.
  * \return The transformed graph
  */
-Graph ApplyPasses(Graph src,
+NNVM_DLL Graph ApplyPasses(Graph src,
                   const std::vector<std::string>& passes);
 
 /*!

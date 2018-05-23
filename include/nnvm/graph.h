@@ -24,7 +24,7 @@ class IndexedGraph;
  * \brief Symbolic computation graph.
  *  This is the intermediate representation for optimization pass.
  */
-class Graph {
+class NNVM_DLL Graph {
  public:
   /*! \brief outputs of the computation graph. */
   std::vector<NodeEntry> outputs;

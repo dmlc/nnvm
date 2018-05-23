@@ -7,8 +7,10 @@
 #include <nnvm/node.h>
 #include <nnvm/op_attr_types.h>
 #include <nnvm/compiler/op_attr_types.h>
+#include <nnvm/compiler/schedule_factory.h>
 #include <nnvm/compiler/util.h>
 #include <nnvm/top/tensor.h>
+#include <nnvm/top/util.h>
 #include <cctype>
 #include <sstream>
 #include "../op_common.h"
@@ -72,6 +74,8 @@ Example::
                     const Array<Tensor>& out_info) {
     return Array<Tensor>{ topi::nn::flatten(inputs[0]) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kInjective)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
@@ -182,6 +186,8 @@ Example::
     const ConcatenateParam& param = nnvm::get<ConcatenateParam>(attrs.parsed);
     return Array<Tensor>{ topi::concatenate(inputs, param.axis) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kInjective)
 .set_num_outputs(1)
 .set_num_inputs(kVarg)
 .set_support_level(1);
@@ -237,6 +243,8 @@ will return a new array with shape ``(2,1,1,1,1,1,3,4)``.
     const ExpandDimsParam& param = nnvm::get<ExpandDimsParam>(attrs.parsed);
     return Array<Tensor>{ topi::expand_dims(inputs[0], param.axis, param.num_newaxis) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kBroadcast)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds){
@@ -387,6 +395,8 @@ along which to split the array.
       return Array<Tensor>{ topi::split(inputs[0], indices, param.axis) };
     }
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kInjective)
 .set_support_level(1);
 
 // cast
@@ -573,6 +583,8 @@ The significance of each is explained below:
                     const Array<Tensor>& out_info) {
     return Array<Tensor>{ topi::reshape(inputs[0], out_info[0]->shape) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kInjective)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds) {
@@ -702,6 +714,8 @@ Examples::
     auto axis = ShapeToArray(param.axis);
     return Array<Tensor>{ topi::squeeze(inputs[0], axis) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kInjective)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds) {
@@ -820,6 +834,8 @@ Examples::
     auto axes = ShapeToArray(param.axes);
     return Array<Tensor>{ topi::transpose(inputs[0], axes) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_injective"))
+.set_attr<TOpPattern>("TOpPattern", kInjective)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds) {

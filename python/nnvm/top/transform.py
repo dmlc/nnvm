@@ -7,10 +7,6 @@ from .tensor import _fschedule_broadcast, _fschedule_injective
 from . import registry as reg
 from .registry import OpPattern
 
-# expand_dims
-reg.register_pattern("expand_dims", OpPattern.BROADCAST)
-reg.register_schedule("expand_dims", _fschedule_broadcast)
-
 # expand_like
 @reg.register_compute("expand_like")
 def compute_expand_like(attrs, inputs, _):
@@ -36,23 +32,3 @@ def compute_reshape_like(attrs, inputs, out_info):
     return topi.reshape(inputs[0], inputs[1].shape)
 reg.register_pattern("reshape_like", OpPattern.INJECTIVE)
 reg.register_schedule("reshape_like", _fschedule_injective)
-
-# transpose
-reg.register_pattern("transpose", OpPattern.INJECTIVE)
-reg.register_schedule("transpose", _fschedule_injective)
-
-# reshape
-reg.register_pattern("reshape", OpPattern.INJECTIVE)
-reg.register_schedule("reshape", _fschedule_injective)
-
-# squeeze
-reg.register_pattern("squeeze", OpPattern.INJECTIVE)
-reg.register_schedule("squeeze", _fschedule_injective)
-
-# concatenate
-reg.register_pattern("concatenate", OpPattern.INJECTIVE)
-reg.register_schedule("concatenate", _fschedule_injective)
-
-# split
-reg.register_pattern("split", OpPattern.INJECTIVE)
-reg.register_schedule("split", _fschedule_injective)

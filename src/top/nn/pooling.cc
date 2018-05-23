@@ -7,8 +7,10 @@
 #include <nnvm/node.h>
 #include <nnvm/op_attr_types.h>
 #include <nnvm/compiler/op_attr_types.h>
+#include <nnvm/compiler/schedule_factory.h>
 #include <nnvm/compiler/util.h>
 #include <nnvm/top/nn.h>
+#include <nnvm/top/util.h>
 #include "./nn_common.h"
 #include "../op_common.h"
 #include "../elemwise_op_common.h"
@@ -147,6 +149,8 @@ NNVM_REGISTER_OP(max_pool2d)
     topi::nn::pool(inputs[0], pool_size, strides, padding,
                    topi::nn::kMaxPool, ceil_mode, layout.name())};
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_pool"))
+.set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable)
 .set_attr<FGradient>(
   "FGradient", [](const NodePtr& n,
                   const std::vector<NodeEntry>& ograds) {
@@ -220,6 +224,8 @@ NNVM_REGISTER_OP(avg_pool2d)
     topi::nn::pool(inputs[0], pool_size, strides, padding,
                    topi::nn::kAvgPool, ceil_mode, layout.name(), count_include_pad)};
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_pool"))
+.set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable)
 .set_num_outputs(1)
 .set_num_inputs(1)
 .set_support_level(2);
@@ -323,6 +329,8 @@ NNVM_REGISTER_OP(global_max_pool2d)
   return Array<Tensor>{
     topi::nn::global_pool(inputs[0], topi::nn::kMaxPool, layout.name()) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_global_pool"))
+.set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable)
 .set_num_outputs(1)
 .set_num_inputs(1)
 .set_support_level(2);
@@ -364,6 +372,8 @@ NNVM_REGISTER_OP(global_avg_pool2d)
   return Array<Tensor>{
     topi::nn::global_pool(inputs[0], topi::nn::kAvgPool, layout.name()) };
 })
+.set_attr<FTVMSchedule>("FTVMSchedule", MakeScheduleQuery("schedule_global_pool"))
+.set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable)
 .set_num_outputs(1)
 .set_num_inputs(1)
 .set_support_level(2);

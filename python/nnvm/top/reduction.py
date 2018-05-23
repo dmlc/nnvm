@@ -5,8 +5,6 @@ from __future__ import absolute_import
 import tvm
 import topi
 import topi.cuda
-from . import registry as reg
-from .registry import OpPattern
 
 def _schedule_reduce(_, outs, target):
     """Generic schedule for reduce"""
@@ -25,15 +23,3 @@ def _compute_reduce(f):
             return f(inputs[0], axis=axis, keepdims=keepdims)
         return f(inputs[0], keepdims=keepdims)
     return _compute
-
-# sum
-reg.register_pattern("sum", OpPattern.COMM_REDUCE)
-reg.register_schedule("sum", _fschedule_reduce)
-
-# max
-reg.register_pattern("max", OpPattern.COMM_REDUCE)
-reg.register_schedule("max", _fschedule_reduce)
-
-# min
-reg.register_pattern("min", OpPattern.COMM_REDUCE)
-reg.register_schedule("min", _fschedule_reduce)

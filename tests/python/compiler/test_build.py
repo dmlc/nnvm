@@ -28,7 +28,7 @@ def test_compile():
         out = tvm.nd.empty(shape, dtype)
         get_output(0, out)
         np.testing.assert_allclose(
-            out.asnumpy(), np.exp(na.asnumpy() + nb.asnumpy()))
+            out.asnumpy(), np.exp(na.asnumpy() + nb.asnumpy()), rtol=1e-5)
 
     graph, lib, _ = nnvm.compiler.build(z, "llvm", shape_dict)
     assert graph.index.num_nodes == 3
@@ -50,7 +50,7 @@ def test_run():
     ny = tvm.nd.array(np.random.uniform(size=shape).astype(dtype))
     res = _run_graph(z, {"x": nx, "y": ny})
     np.testing.assert_allclose(
-        res[0].asnumpy(), np.exp(nx.asnumpy() + ny.asnumpy()))
+        res[0].asnumpy(), np.exp(nx.asnumpy() + ny.asnumpy()), rtol=1e-5)
 
 
 def test_precompute_prune():
@@ -74,7 +74,7 @@ def test_precompute_prune():
     m.run()
     out = m.get_output(0, out=res)
     np.testing.assert_allclose(
-        res.asnumpy(), nx.asnumpy() + 1 + ny.asnumpy() + na.asnumpy())
+        res.asnumpy(), nx.asnumpy() + 1 + ny.asnumpy() + na.asnumpy(), rtol=1e-5)
 
 
 def test_dtypes():
