@@ -2,7 +2,6 @@
 """Keras frontend."""
 from __future__ import absolute_import as _abs
 import sys
-import logging
 import numpy as np
 import tvm
 from .. import symbol as _sym
@@ -346,9 +345,11 @@ def _convert_concat(insym, keras_layer, _):
 
 
 def _convert_reshape(insym, keras_layer, _):
-    # XXX: This works only when the target shape is in `channels_last` layout.
-    logging.warning('Assumes that the target shape is in `channels_last` layout.')
-    ch = keras_layer.target_shape[-1]
+    _check_data_format(keras_layer)
+    ch = keras_layer.input_shape[-1]
+    assert ch == keras_layer.target_shape[-1], \
+        "Only supports last dimension in target shape being equal to " \
+        "the channel number of input tensor."
     shape = (-1, ch) + keras_layer.target_shape[:-1]
     return _sym.reshape(insym, shape=shape)
 
