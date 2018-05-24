@@ -205,16 +205,29 @@ def _upsampling(inputs, attrs):
     new_attrs = {'scale':int(scale)}
     return _get_nnvm_op('upsampling')(inputs[0], **new_attrs)
 
+_level_1_ops = ["dense", "relu", "tanh", "sigmoid", "exp", "log", "sqrt",
+                "elemwise_add", "elemwise_sub", "elemwise_mul",
+                "elemwise_div", "elemwise_sum", "flatten",
+                "expand_dims", "squeeze", "split", "dropout",
+                "softmax", "log_softmax", "pad", "block_grad"]
 
-_identity_list = ['__add_scalar__', '__add_symbol__', '__div_scalar__',
-                  '__div_symbol__', '__mul_scalar__', '__mul_symbol__',
-                  '__pow_scalar__', '__rdiv_scalar__', '__rpow_scalar__',
-                  '__rsub_scalar__', '__sub_scalar__', '__sub_symbol__',
-                  'broadcast_add', 'broadcast_div', 'broadcast_mul',
-                  'broadcast_sub', 'broadcast_to', 'cast', 'elemwise_add',
-                  'elemwise_div', 'elemwise_mul', 'elemwise_sub', 'exp',
-                  'flatten', 'log', 'log_softmax', 'max', 'min', 'negative',
-                  'relu', 'sigmoid', 'softmax', 'sum', 'tanh', 'transpose']
+_level_2_ops = ["max_pool2d", "avg_pool2d",
+                "global_max_pool2d", "global_avg_pool2d"]
+
+_level_3_ops = ["copy", "negative",
+                "__add_scalar__", "__sub_scalar__", "__rsub_scalar__",
+                "__mul_scalar__", "__div_scalar__", "__rdiv_scalar__",
+                "__pow_scalar__", "__rpow_scalar__",
+                "__add_symbol__", "__sub_symbol__",
+                "__mul_symbol__", "__div_symbol__", "__pow_symbol__"]
+
+_level_4_ops = ["transpose", "broadcast_to", "sum", "min", "max",
+                "broadcast_add", "broadcast_sub", "broadcast_mul",
+                "broadcast_div", "clip", "greater", "less", "cast",
+                "expand_like", "reshape_like", "full", "full_like",
+                "ones", "ones_like", "zeros", "zeros_like"]
+
+_identity_list = _level_1_ops + _level_2_ops + _level_3_ops + _level_4_ops
 
 _convert_map = {
     '_div_scalar'   : _rename('__div_scalar__'),
@@ -223,6 +236,8 @@ _convert_map = {
     '_plus_scalar'  : _rename('__add_scalar__'),
     '_rdiv_scalar'  : _rename('__rdiv_scalar__'),
     '_rminus_scalar': _rename('__rsub_scalar__'),
+    'broadcast_greater' : _rename('greater'),
+    'broadcast_lesser'  : _rename('less'),
     'Activation'    : _activations,
     'BatchNorm'     : _batch_norm,
     'BatchNorm_v1'  : _batch_norm,
