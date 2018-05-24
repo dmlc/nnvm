@@ -289,6 +289,30 @@ def _convert_upsample(insym, keras_layer, _):
     return _sym.upsampling(insym, **params)
 
 
+def _convert_cropping(insym, keras_layer, _):
+    _check_data_format(keras_layer)
+    crop_type = type(keras_layer).__name__
+    if crop_type == "Cropping1D":
+        raise NotImplementedError("Cropping1D not implemented")
+    elif crop_type == "Cropping2D":
+        if isinstance(keras_layer.cropping, int):
+            top = bottom = keras_layer.cropping
+            left = right = keras_layer.cropping
+        else:
+            (_, height, width, _) = keras_layer.input_shape
+            (height_crop, width_crop) = keras_layer.cropping
+            if isinstance(height_crop, int):
+                top = bottom = height_crop
+                left = right = width_crop
+            else:
+                (top, bottom) = height_crop
+                (left, right) = width_crop
+    else:
+        raise TypeError("Unrecognized cropping type : {}".format(crop_type))
+    height_cropped_sym = _sym.split(insym, indices_or_sections=(top, height-bottom), axis=2)[1]
+    return _sym.split(height_cropped_sym, indices_or_sections=(left, width-right), axis=3)[1]
+
+
 def _convert_batchnorm(insym, keras_layer, symtab):
     params = {'scale': False,
               'center': False,
@@ -385,6 +409,7 @@ _convert_map = {
     'Multiply'                 : _convert_merge,
     'ZeroPadding2D'            : _convert_padding,
     'UpSampling2D'             : _convert_upsample,
+    'Cropping2D'               : _convert_cropping,
 
     # 'ZeroPadding1D'          : _convert_padding,
     # 'AveragePooling1D'       : _convert_pooling,
@@ -392,7 +417,6 @@ _convert_map = {
     # 'GlobalAveragePooling1D' : _convert_pooling,
     # 'GlobalMaxPooling1D'     : _convert_pooling,
     # 'Cropping1D'             : _convert_cropping,
-    # 'Cropping2D'             : _convert_cropping,
     # 'UpSampling1D'           : _convert_upsample,
     # 'UpSampling3D'           : _convert_upsample,
     # 'Conv1D'                 : _convert_convolution1d,
